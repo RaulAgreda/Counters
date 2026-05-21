@@ -26,7 +26,9 @@ const translations = {
         errorNameRequired: "Por favor, escribe un nombre para el contador.",
         editTags: "Editar etiquetas",
         deleteTagConfirm: "¿Borrar la etiqueta \"{name}\"? Esto no afectará a los contadores que ya la tengan.",
-        resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?"
+        resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?",
+        confirmTitle: "Confirmar",
+        ok: "Aceptar"
     },
     en: {
         title: "My Counters",
@@ -54,7 +56,9 @@ const translations = {
         errorNameRequired: "Please enter a name for the counter.",
         editTags: "Edit tags",
         deleteTagConfirm: "Delete tag \"{name}\"? This won't affect counters already using it.",
-        resetSelectionConfirm: "Reset the {count} selected counters to 0?"
+        resetSelectionConfirm: "Reset the {count} selected counters to 0?",
+        confirmTitle: "Confirm",
+        ok: "OK"
     }
 };
 
@@ -93,6 +97,15 @@ const editSelectionBtn = document.getElementById('editSelectionBtn');
 const resetSelectionBtn = document.getElementById('resetSelectionBtn');
 const deleteSelectionBtn = document.getElementById('deleteSelectionBtn');
 
+// Referencias para el diálogo custom
+const customConfirmDialog = document.getElementById('customConfirmDialog');
+const confirmTitle = document.getElementById('confirmTitle');
+const confirmMessage = document.getElementById('confirmMessage');
+const promptContainer = document.getElementById('promptContainer');
+const confirmInput = document.getElementById('confirmInput');
+const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+const confirmOkBtn = document.getElementById('confirmOkBtn');
+
 // Estado de la aplicación
 let counters = JSON.parse(localStorage.getItem('my_counters')) || [];
 // Asegurar que todos los contadores tengan un ID único para el tracking
@@ -107,6 +120,53 @@ let selectedCountersIDs = []; // IDs de los contadores seleccionados
 let tempSelectedTags = []; // Etiquetas seleccionadas temporalmente en el modal
 let editingIndex = null; // Índice del contador que se está editando
 let pressTimer;
+
+// --- DIÁLOGOS CUSTOM ---
+
+/**
+ * Función genérica para mostrar un diálogo de confirmación o un prompt.
+ * @param {string} title - Título del modal.
+ * @param {string} message - Mensaje del modal.
+ * @param {boolean} isPrompt - Si debe mostrar un campo de texto.
+ * @param {string} defaultValue - Valor por defecto para el prompt.
+ * @returns {Promise} - Devuelve el valor del prompt o true/false.
+ */
+function showCustomDialog(title, message, isPrompt = false, defaultValue = '') {
+    return new Promise((resolve) => {
+        const t = translations[currentLang];
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        confirmCancelBtn.textContent = t.cancel;
+        confirmOkBtn.textContent = t.ok || t.confirm || 'OK';
+        
+        if (isPrompt) {
+            promptContainer.classList.remove('hidden');
+            confirmInput.value = defaultValue;
+            setTimeout(() => confirmInput.focus(), 100);
+        } else {
+            promptContainer.classList.add('hidden');
+        }
+
+        const cleanup = () => {
+            confirmOkBtn.onclick = null;
+            confirmCancelBtn.onclick = null;
+            customConfirmDialog.close();
+        };
+
+        confirmOkBtn.onclick = () => {
+            const result = isPrompt ? confirmInput.value : true;
+            cleanup();
+            resolve(result);
+        };
+
+        confirmCancelBtn.onclick = () => {
+            cleanup();
+            resolve(isPrompt ? null : false);
+        };
+
+        customConfirmDialog.showModal();
+    });
+}
 
 // --- INICIALIZACIÓN ---
 
@@ -261,6 +321,16 @@ function renderTags() {
         item.appendChild(text);
 
         if (isEditingTags && tag !== t.allTags) {
+            // Botón editar etiqueta
+            const editTagBtn = document.createElement('button');
+            editTagBtn.className = 'btn-edit-tag';
+            editTagBtn.innerHTML = '✎';
+            editTagBtn.onclick = (e) => {
+                e.stopPropagation();
+                editCustomTagName(tag);
+            };
+            item.appendChild(editTagBtn);
+
             // Botón eliminar etiqueta
             const deleteTagBtn = document.createElement('button');
             deleteTagBtn.className = 'btn-delete-tag';
@@ -351,26 +421,40 @@ function getDragAfterElement(container, y, x) {
     }, { offset: Number.NEGATIVE_INFINITY, offsetY: Number.NEGATIVE_INFINITY }).element;
 }
 
-function deleteCustomTag(tag) {
+async function deleteCustomTag(tag) {
     const t = translations[currentLang];
-    if (confirm(t.deleteTagConfirm.replace('{name}', tag))) {
-        // Eliminar de las etiquetas personalizadas
-        customTags = customTags.filter(at => at !== tag);
+    const confirmed = await showCustomDialog(t.deleteTitle, t.deleteTagConfirm.replace('{name}', tag));
+    if (confirmed) {
+        // ... (existing code for deletion)
+    }
+}
+
+async function editCustomTagName(oldTag) {
+    const t = translations[currentLang];
+    const newName = await showCustomDialog(t.editTags, t.newTagPrompt, true, oldTag);
+    
+    if (newName && newName.trim() !== '' && newName.trim() !== oldTag) {
+        const newTag = newName.trim();
+
+        // 1. Actualizar en customTags
+        customTags = customTags.map(tag => tag === oldTag ? newTag : tag);
         localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
 
-        // Eliminar la etiqueta de todos los contadores
+        // 2. Actualizar en los contadores
         counters = counters.map(counter => {
             if (counter.tags) {
-                counter.tags = counter.tags.filter(t => t !== tag);
+                counter.tags = counter.tags.map(t => t === oldTag ? newTag : t);
             }
             return counter;
         });
         localStorage.setItem('my_counters', JSON.stringify(counters));
 
-        if (currentTag === tag) {
-            currentTag = t.allTags;
-            pageTitle.textContent = t.title;
+        // 3. Si era la etiqueta actual seleccionada, actualizarla
+        if (currentTag === oldTag) {
+            currentTag = newTag;
+            pageTitle.innerHTML = `<span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">sell</span>${currentTag}`;
         }
+
         renderTags();
         renderCounters();
     }
@@ -386,9 +470,9 @@ editTagsBtn.addEventListener('click', () => {
     renderTags();
 });
 
-addTagBtn.addEventListener('click', () => {
+addTagBtn.addEventListener('click', async () => {
     const t = translations[currentLang];
-    const newTagScreen = prompt(t.newTagPrompt);
+    const newTagScreen = await showCustomDialog(t.addTag, t.newTagPrompt, true);
     if (newTagScreen && newTagScreen.trim() !== '') {
         const tag = newTagScreen.trim();
         
@@ -483,9 +567,10 @@ function clearSelection() {
     renderCounters();
 }
 
-function deleteSelectedCounters() {
+async function deleteSelectedCounters() {
     const t = translations[currentLang];
-    if (confirm(t.deleteMultipleConfirm.replace('{count}', selectedCountersIDs.length))) {
+    const confirmed = await showCustomDialog(t.deleteTitle, t.deleteMultipleConfirm.replace('{count}', selectedCountersIDs.length));
+    if (confirmed) {
         // Filtramos el array de contadores para quitar los que tienen IDs seleccionados
         counters = counters.filter(c => !selectedCountersIDs.includes(c.id));
         saveToLocalStorage();
@@ -493,9 +578,10 @@ function deleteSelectedCounters() {
     }
 }
 
-function resetSelectedCounters() {
+async function resetSelectedCounters() {
     const t = translations[currentLang];
-    if (confirm(t.resetSelectionConfirm.replace('{count}', selectedCountersIDs.length))) {
+    const confirmed = await showCustomDialog(t.confirmEdit, t.resetSelectionConfirm.replace('{count}', selectedCountersIDs.length));
+    if (confirmed) {
         counters.forEach(c => {
             if (selectedCountersIDs.includes(c.id)) {
                 c.value = 0;
@@ -724,7 +810,7 @@ function renderCounters() {
         controls.appendChild(minusBtn);
         controls.appendChild(plusBtn);
         
-        card.appendChild(deleteBtn);
+        // card.appendChild(deleteBtn);
         card.appendChild(value);
         card.appendChild(tagsDisplay); // Añadimos etiquetas abajo
         card.appendChild(controls);
@@ -774,8 +860,8 @@ function renderModalTags() {
     addPill.type = 'button';
     addPill.className = 'modal-tag-add';
     addPill.textContent = `+ ${t.addTag}`;
-    addPill.onclick = () => {
-        const newTagName = prompt(t.newTagPrompt);
+    addPill.onclick = async () => {
+        const newTagName = await showCustomDialog(t.addTag, t.newTagPrompt, true);
         if (newTagName && newTagName.trim() !== '') {
             const tag = newTagName.trim();
             if (!customTags.includes(tag)) {
@@ -825,10 +911,11 @@ function updateValue(index, change) {
 }
 
 // Función para eliminar un contador
-function deleteCounter(index) {
+async function deleteCounter(index) {
     const t = translations[currentLang];
     const counterName = counters[index].name;
-    if(confirm(t.deleteConfirm.replace('{name}', counterName))) {
+    const confirmed = await showCustomDialog(t.deleteTitle, t.deleteConfirm.replace('{name}', counterName));
+    if(confirmed) {
         counters.splice(index, 1); // Lo quitamos del array
         saveToLocalStorage();
         clearSelection(); // Limpiar selección por seguridad

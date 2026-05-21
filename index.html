@@ -95,6 +95,21 @@
         </form>
     </dialog>
 
+    <!-- Modal Genérico para Confirmaciones y Prompts -->
+    <dialog id="customConfirmDialog" class="counter-modal confirm-modal">
+        <div class="modal-content">
+            <h2 id="confirmTitle">Confirmar</h2>
+            <p id="confirmMessage">¿Estás seguro?</p>
+            <div id="promptContainer" class="prompt-container hidden">
+                <input type="text" id="confirmInput" class="custom-input">
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="confirmCancelBtn" class="btn-cancel">Cancelar</button>
+                <button type="button" id="confirmOkBtn" class="btn-confirm">Confirmar</button>
+            </div>
+        </div>
+    </dialog>
+
     <script src="script.js"></script>
 </body>
 </html>
