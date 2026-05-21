@@ -115,6 +115,31 @@ function init() {
     setupCountersDragAndDrop();
 }
 
+function handleCounterReorder() {
+    const t = translations[currentLang];
+    const draggables = Array.from(countersContainer.querySelectorAll('.counter-wrapper:not(.empty-msg)'));
+    const newOrderIDs = draggables.map(w => parseFloat(w.dataset.id));
+    
+    let newCounters = [...counters];
+    
+    if (currentTag === t.allTags) {
+        newCounters = newOrderIDs.map(id => counters.find(c => c.id === id));
+    } else {
+        const filteredIndices = counters
+            .map((c, i) => (c.tags && c.tags.includes(currentTag)) ? i : -1)
+            .filter(i => i !== -1);
+        
+        const reorderedFiltered = newOrderIDs.map(id => counters.find(c => c.id === id));
+        filteredIndices.forEach((originalIdx, i) => {
+            newCounters[originalIdx] = reorderedFiltered[i];
+        });
+    }
+    
+    counters = newCounters;
+    saveToLocalStorage();
+    renderCounters();
+}
+
 function setupCountersDragAndDrop() {
     countersContainer.addEventListener('dragover', e => {
         e.preventDefault();
@@ -129,29 +154,29 @@ function setupCountersDragAndDrop() {
         }
     });
 
-    countersContainer.addEventListener('drop', () => {
-        const t = translations[currentLang];
-        const draggables = Array.from(countersContainer.querySelectorAll('.counter-wrapper:not(.empty-msg)'));
-        const newOrderIDs = draggables.map(w => parseFloat(w.dataset.id));
+    countersContainer.addEventListener('drop', handleCounterReorder);
+
+    // Soporte para Touch Reorder
+    countersContainer.addEventListener('touchmove', e => {
+        const dragging = document.querySelector('.counter-wrapper.dragging');
+        if (!dragging) return;
         
-        let newCounters = [...counters];
-        
-        if (currentTag === t.allTags) {
-            newCounters = newOrderIDs.map(id => counters.find(c => c.id === id));
+        e.preventDefault(); // Evitar scroll mientras se arrastra
+        const touch = e.touches[0];
+        const afterElement = getDragAfterElement(countersContainer, touch.clientY, touch.clientX);
+        if (afterElement == null) {
+            countersContainer.appendChild(dragging);
         } else {
-            const filteredIndices = counters
-                .map((c, i) => (c.tags && c.tags.includes(currentTag)) ? i : -1)
-                .filter(i => i !== -1);
-            
-            const reorderedFiltered = newOrderIDs.map(id => counters.find(c => c.id === id));
-            filteredIndices.forEach((originalIdx, i) => {
-                newCounters[originalIdx] = reorderedFiltered[i];
-            });
+            countersContainer.insertBefore(dragging, afterElement);
         }
-        
-        counters = newCounters;
-        saveToLocalStorage();
-        renderCounters(); // Re-renderizar para asegurar que todo esté sincronizado
+    }, { passive: false });
+
+    countersContainer.addEventListener('touchend', () => {
+        const dragging = document.querySelector('.counter-wrapper.dragging');
+        if (dragging) {
+            dragging.classList.remove('dragging');
+            handleCounterReorder();
+        }
     });
 }
 
@@ -245,6 +270,13 @@ function renderTags() {
             item.classList.add('editing');
             item.draggable = true;
             
+            // Soporte touch drag
+            item.addEventListener('touchstart', () => {
+                if (isEditingTags) {
+                    item.classList.add('dragging');
+                }
+            });
+
             // Icono de arrastrar
             const handle = document.createElement('span');
             handle.className = 'drag-handle';
@@ -264,7 +296,7 @@ function renderTags() {
             // Botón eliminar etiqueta
             const deleteTagBtn = document.createElement('button');
             deleteTagBtn.className = 'btn-delete-tag';
-            deleteTagBtn.innerHTML = '🗑';
+            deleteTagBtn.innerHTML = '<span class="material-symbols-outlined">delete</span>';
             deleteTagBtn.onclick = (e) => {
                 e.stopPropagation();
                 deleteCustomTag(tag);
@@ -296,6 +328,15 @@ function renderTags() {
     }
 }
 
+function handleTagReorder() {
+    const draggables = Array.from(tagsList.querySelectorAll('.tag-item:not(.all-tags)'));
+    const newOrder = draggables
+        .map(item => item.querySelector('.tag-name').dataset.name);
+    
+    customTags = newOrder;
+    localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
+}
+
 function setupDragAndDrop() {
     tagsList.addEventListener('dragover', e => {
         e.preventDefault();
@@ -310,12 +351,31 @@ function setupDragAndDrop() {
 
     tagsList.addEventListener('drop', (e) => {
         e.preventDefault();
-        const draggables = Array.from(tagsList.querySelectorAll('.tag-item:not(.all-tags)'));
-        const newOrder = draggables
-            .map(item => item.querySelector('.tag-name').dataset.name);
-        
-        customTags = newOrder;
-        localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
+        handleTagReorder();
+    });
+
+    // Soporte Touch para etiquetas
+    tagsList.addEventListener('touchmove', e => {
+        const dragging = document.querySelector('.tag-item.dragging');
+        if (!dragging) return;
+
+        e.preventDefault();
+        const touch = e.touches[0];
+        const afterElement = getDragAfterElement(tagsList, touch.clientY);
+        if (afterElement == null) {
+            tagsList.appendChild(dragging);
+        } else {
+            tagsList.insertBefore(dragging, afterElement);
+        }
+    }, { passive: false });
+
+    tagsList.addEventListener('touchend', () => {
+        const dragging = document.querySelector('.tag-item.dragging');
+        if (dragging) {
+            dragging.classList.remove('dragging');
+            handleTagReorder();
+            renderTags();
+        }
     });
 }
 
@@ -623,7 +683,13 @@ function renderCounters() {
                     selectedCountersIDs.push(counter.id);
                     updateSelectionUI();
                     renderCounters();
-                    wrapper.draggable = true;
+                    
+                    // Buscar el nuevo wrapper creado tras renderCounters y añadirle la clase dragging
+                    const newWrapper = countersContainer.querySelector(`[data-id="${counter.id}"]`);
+                    if (newWrapper) {
+                        newWrapper.classList.add('dragging');
+                    }
+                    
                     if (window.navigator.vibrate) window.navigator.vibrate(50);
                 }
             }, 600);
@@ -839,11 +905,8 @@ function deleteCounter(index) {
 // Inicialización de la aplicación
 // Deseleccionar al hacer click fuera de un contador
 document.addEventListener('mousedown', (e) => {
-    if (!e.target.closest('.counter-wrapper')) {
-        document.querySelectorAll('.counter-wrapper').forEach(w => {
-            w.classList.remove('selected');
-            w.draggable = false;
-        });
+    if (!e.target.closest('.counter-wrapper') && !e.target.closest('.selection-header')) {
+        clearSelection();
     }
 });
 

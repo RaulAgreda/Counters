@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Counters</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=delete,edit,home,refresh,sell" />
 </head>
 <body>
 
@@ -23,9 +23,9 @@
             <span id="selectionCount">0</span>
         </div>
         <div class="selection-actions">
-            <button id="editSelectionBtn" class="selection-btn" title="Editar">✎</button>
-            <button id="resetSelectionBtn" class="selection-btn" title="Reiniciar a 0">↺</button>
-            <button id="deleteSelectionBtn" class="selection-btn delete" title="Eliminar">🗑</button>
+            <button id="editSelectionBtn" class="selection-btn" title="Editar"><span class="material-symbols-outlined">edit</span></button>
+            <button id="resetSelectionBtn" class="selection-btn" title="Reiniciar a 0"><span class="material-symbols-outlined">refresh</span></button>
+            <button id="deleteSelectionBtn" class="selection-btn delete" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>
         </div>
     </header>
 
@@ -40,7 +40,7 @@
         </nav>
         <div class="sidebar-footer">
             <button id="editTagsBtn" class="edit-tags-footer-btn">
-                <span>✎</span> <span id="editTagsText">Editar etiquetas</span>
+                <span class="material-symbols-outlined">edit</span> <span id="editTagsText">Editar etiquetas</span>
             </button>
             <button id="addTagBtn" class="add-tag-footer-btn">
                 <span id="addTagIcon">+</span> <span id="addTagText">Añadir etiqueta</span>
@@ -73,7 +73,7 @@
                             <button type="button" class="color-preset" style="background-color: #f1c40f;" data-color="#f1c40f"></button>
                             <div class="color-custom-container">
                                 <button type="button" id="customColorBtn" class="color-preset custom-btn" title="Color personalizado">
-                                    <span class="edit-icon">✎</span>
+                                    <span class="material-symbols-outlined edit-icon">edit</span>
                                 </button>
                                 <input type="color" id="counterColor" value="#3498db" class="hidden-color-picker">
                             </div>

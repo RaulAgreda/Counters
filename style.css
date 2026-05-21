@@ -640,7 +640,7 @@ input[type="color"]::-webkit-color-swatch {
 /* Contenedor de contadores */
 .counters-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 30px;
     width: 100%;
     max-width: 800px;
