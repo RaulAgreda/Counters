@@ -20,7 +20,9 @@ const translations = {
         deleteTitle: "Eliminar contador",
         menuTitle: "Ver etiquetas",
         langBtn: "ES",
-        errorNameRequired: "Por favor, escribe un nombre para el contador."
+        errorNameRequired: "Por favor, escribe un nombre para el contador.",
+        editTags: "Editar etiquetas",
+        deleteTagConfirm: "¿Borrar la etiqueta \"{name}\"? Esto no afectará a los contadores que ya la tengan."
     },
     en: {
         title: "My Counters",
@@ -42,7 +44,9 @@ const translations = {
         deleteTitle: "Delete counter",
         menuTitle: "View tags",
         langBtn: "EN",
-        errorNameRequired: "Please enter a name for the counter."
+        errorNameRequired: "Please enter a name for the counter.",
+        editTags: "Edit tags",
+        deleteTagConfirm: "Delete tag \"{name}\"? This won't affect counters already using it."
     }
 };
 
@@ -67,6 +71,7 @@ const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const closeSidebar = document.getElementById('closeSidebar');
 const addTagBtn = document.getElementById('addTagBtn');
+const editTagsBtn = document.getElementById('editTagsBtn');
 const tagsList = document.getElementById('tagsList');
 const pageTitle = document.getElementById('pageTitle');
 const langBtn = document.getElementById('langBtn');
@@ -77,6 +82,7 @@ let customTags = JSON.parse(localStorage.getItem('my_custom_tags')) || [];
 let currentTag = 'Todos';
 let selectedColor = '#3498db';
 let currentLang = localStorage.getItem('my_app_lang') || 'es';
+let isEditingTags = false;
 
 // --- MANEJO DE IDIOMA ---
 
@@ -90,6 +96,8 @@ function setLanguage(lang) {
     pageTitle.textContent = currentTag === 'Todos' || currentTag === 'All' ? t.title : currentTag;
     document.getElementById('sidebarTitle').textContent = t.sidebarTitle;
     document.getElementById('addTagText').textContent = t.addTag;
+    document.getElementById('editTagsText').textContent = t.editTags;
+    document.getElementById('editTagsBtn').title = t.editTags;
     document.getElementById('modalTitle').textContent = t.modalTitle;
     document.getElementById('labelColor').textContent = t.labelColor;
     document.getElementById('labelTags').textContent = t.labelTags;
@@ -135,24 +143,63 @@ function renderTags() {
     tagsList.innerHTML = '';
     const t = translations[currentLang];
     
-    // Obtener todas las etiquetas únicas de los contadores existentes
+    // 1. Obtener etiquetas de los contadores que NO están en customTags
     const tagsFromCounters = new Set();
     counters.forEach(c => {
         if (c.tags) {
-            c.tags.forEach(tag => tagsFromCounters.add(tag));
+            c.tags.forEach(tag => {
+                if (!customTags.includes(tag)) {
+                    tagsFromCounters.add(tag);
+                }
+            });
         }
     });
 
-    // Combinar con las etiquetas creadas manualmente
-    const allTags = new Set([...Array.from(tagsFromCounters), ...customTags]);
+    // 2. Las etiquetas automáticas (de contadores) se ordenan alfabéticamente
+    const sortedAutoTags = Array.from(tagsFromCounters).sort();
 
-    const tagsArray = [t.allTags, ...Array.from(allTags).sort()];
+    // 3. El orden final es: [Todos] + [customTags en su orden] + [etiquetas de contadores nuevas]
+    const tagsArray = [t.allTags, ...customTags, ...sortedAutoTags];
 
-    tagsArray.forEach(tag => {
+    tagsArray.forEach((tag, index) => {
         const item = document.createElement('div');
         item.className = `tag-item ${tag === currentTag ? 'active' : ''}`;
-        item.textContent = tag;
+        if (tag === t.allTags) item.classList.add('all-tags');
+        
+        if (isEditingTags && tag !== t.allTags) {
+            item.classList.add('editing');
+            item.draggable = true;
+            
+            // Icono de arrastrar
+            const handle = document.createElement('span');
+            handle.className = 'drag-handle';
+            handle.textContent = '⋮⋮';
+            item.appendChild(handle);
+        }
+
+        const text = document.createElement('span');
+        text.className = 'tag-name';
+        text.textContent = tag;
+        item.appendChild(text);
+
+        if (isEditingTags && tag !== t.allTags) {
+            // Botón eliminar etiqueta
+            const deleteTagBtn = document.createElement('button');
+            deleteTagBtn.className = 'btn-delete-tag';
+            deleteTagBtn.innerHTML = '🗑';
+            deleteTagBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteCustomTag(tag);
+            };
+            item.appendChild(deleteTagBtn);
+
+            // Eventos Drag & Drop
+            item.addEventListener('dragstart', () => item.classList.add('dragging'));
+            item.addEventListener('dragend', () => item.classList.remove('dragging'));
+        }
+
         item.onclick = () => {
+            if (isEditingTags) return;
             currentTag = tag;
             pageTitle.textContent = tag === t.allTags ? t.title : tag;
             renderCounters();
@@ -160,11 +207,79 @@ function renderTags() {
         };
         tagsList.appendChild(item);
     });
+
+    if (isEditingTags) {
+        setupDragAndDrop();
+    }
+}
+
+function setupDragAndDrop() {
+    tagsList.addEventListener('dragover', e => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(tagsList, e.clientY);
+        const dragging = document.querySelector('.dragging');
+        if (afterElement == null) {
+            tagsList.appendChild(dragging);
+        } else {
+            tagsList.insertBefore(dragging, afterElement);
+        }
+    });
+
+    tagsList.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggables = Array.from(tagsList.querySelectorAll('.tag-item:not(.all-tags)'));
+        const newOrder = draggables
+            .map(item => item.querySelector('.tag-name').textContent);
+        
+        customTags = newOrder;
+        localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.tag-item:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function deleteCustomTag(tag) {
+    const t = translations[currentLang];
+    if (confirm(t.deleteTagConfirm.replace('{name}', tag))) {
+        // Eliminar de las etiquetas personalizadas
+        customTags = customTags.filter(at => at !== tag);
+        localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
+
+        // Eliminar la etiqueta de todos los contadores
+        counters = counters.map(counter => {
+            if (counter.tags) {
+                counter.tags = counter.tags.filter(t => t !== tag);
+            }
+            return counter;
+        });
+        localStorage.setItem('my_counters', JSON.stringify(counters));
+
+        if (currentTag === tag) currentTag = t.allTags;
+        renderTags();
+        renderCounters();
+    }
 }
 
 menuBtn.addEventListener('click', openSidebar);
 closeSidebar.addEventListener('click', closeSidebarMenu);
 sidebarOverlay.addEventListener('click', closeSidebarMenu);
+
+editTagsBtn.addEventListener('click', () => {
+    isEditingTags = !isEditingTags;
+    editTagsBtn.classList.toggle('active', isEditingTags);
+    renderTags();
+});
 
 addTagBtn.addEventListener('click', () => {
     const t = translations[currentLang];
