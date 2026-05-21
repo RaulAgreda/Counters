@@ -1,0 +1,158 @@
+:root {
+    --bg-color: #1b1b1b;
+    --text-color: #fafafa;
+    --card-bg: #232329;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+h1 {
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+/* Formulario de creación */
+.creator-panel {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 500px;
+    box-sizing: border-box;
+}
+
+.creator-panel input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+.creator-panel input[type="color"] {
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: none;
+}
+
+.creator-panel button {
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.creator-panel button:hover {
+    background-color: #27ae60;
+}
+
+/* Contenedor de contadores */
+.counters-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 30px;
+    width: 100%;
+    max-width: 800px;
+}
+
+.counter-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Tarjeta de cada contador */
+.counter-card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    border: 2px solid transparent; 
+    transition: transform 0.2s;
+    min-height: 140px; /* Asegura un tamaño mínimo */
+    overflow: hidden; /* Corta las esquinas de los botones hijos */
+}
+
+.counter-card:hover {
+    transform: translateY(-2px);
+}
+
+.counter-title {
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    word-break: break-word;
+    color: var(--text-color);
+}
+
+.counter-value {
+    font-size: 48px; /* Aumentado de 36px */
+    font-weight: bold;
+    flex: 1; /* Ocupa el espacio disponible */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.counter-controls {
+    display: flex;
+    gap: 1px;
+    width: 100%;
+}
+
+.btn-control {
+    flex: 1;
+    border: none;
+    padding: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer; /* Color del texto siempre blanco para contraste */
+    transition: opacity 0.2s;
+}
+
+.btn-control:hover {
+    opacity: 0.9;
+}
+
+.btn-minus { border-radius: 0; }
+.btn-plus { border-radius: 0; }
+
+.btn-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: #95a5a6;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.btn-delete:hover {
+    color: #c0392b;
+}

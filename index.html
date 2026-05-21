@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counters</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>Mis Contadores</h1>
+
+    <!-- Panel para crear un nuevo contador -->
+    <div class="creator-panel">
+        <input type="text" id="counterName" placeholder="Ej. Vasos de agua, Flexiones..." maxlength="30">
+        <input type="color" id="counterColor" value="#3498db">
+        <button id="addBtn">Añadir</button>
+    </div>
+
+    <!-- Grid donde se pintarán los contadores -->
+    <div class="counters-container" id="countersContainer"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
