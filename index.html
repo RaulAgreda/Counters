@@ -8,11 +8,23 @@
 </head>
 <body>
 
-    <header>
+    <header id="mainHeader">
         <button id="menuBtn" class="menu-btn" title="Ver etiquetas">☰</button>
         <h1 id="pageTitle">Mis Contadores</h1>
         <div class="header-actions">
             <button id="langBtn" class="lang-btn" title="Cambiar idioma">ES</button>
+        </div>
+    </header>
+
+    <header id="selectionHeader" class="selection-header hidden">
+        <div class="selection-left">
+            <button id="cancelSelectionBtn" class="cancel-selection-btn" title="Cancelar selección">&times;</button>
+            <span id="selectionCount">0</span>
+        </div>
+        <div class="selection-actions">
+            <button id="editSelectionBtn" class="selection-btn" title="Editar">✎</button>
+            <button id="resetSelectionBtn" class="selection-btn" title="Reiniciar a 0">↺</button>
+            <button id="deleteSelectionBtn" class="selection-btn delete" title="Eliminar">🗑</button>
         </div>
     </header>
 

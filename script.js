@@ -7,6 +7,7 @@ const translations = {
         allTags: "Todos",
         fabTitle: "Añadir nuevo contador",
         modalTitle: "Nuevo Contador",
+        modalTitleEdit: "Editar Contador",
         placeholderName: "Ej. Vasos de agua, Flexiones...",
         labelColor: "Color:",
         customColor: "Color personalizado",
@@ -14,15 +15,18 @@ const translations = {
         placeholderTags: "Salud, Deporte, Leer...",
         cancel: "Cancelar",
         confirm: "Añadir",
+        confirmEdit: "Guardar",
         emptyState: "No hay contadores. ¡Añade uno con el botón de abajo a la derecha!",
         deleteConfirm: "¿Estás seguro de que quieres borrar \"{name}\"?",
+        deleteMultipleConfirm: "¿Estás seguro de que quieres borrar {count} contadores?",
         newTagPrompt: "Introduce el nombre de la nueva etiqueta:",
         deleteTitle: "Eliminar contador",
         menuTitle: "Ver etiquetas",
         langBtn: "ES",
         errorNameRequired: "Por favor, escribe un nombre para el contador.",
         editTags: "Editar etiquetas",
-        deleteTagConfirm: "¿Borrar la etiqueta \"{name}\"? Esto no afectará a los contadores que ya la tengan."
+        deleteTagConfirm: "¿Borrar la etiqueta \"{name}\"? Esto no afectará a los contadores que ya la tengan.",
+        resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?"
     },
     en: {
         title: "My Counters",
@@ -31,6 +35,7 @@ const translations = {
         allTags: "All",
         fabTitle: "Add new counter",
         modalTitle: "New Counter",
+        modalTitleEdit: "Edit Counter",
         placeholderName: "e.g. Water glasses, Pushups...",
         labelColor: "Color:",
         customColor: "Custom Color",
@@ -38,15 +43,18 @@ const translations = {
         placeholderTags: "Health, Sports, Reading...",
         cancel: "Cancel",
         confirm: "Add",
+        confirmEdit: "Save",
         emptyState: "No counters yet. Add one with the button below!",
         deleteConfirm: "Are you sure you want to delete \"{name}\"?",
+        deleteMultipleConfirm: "Are you sure you want to delete {count} counters?",
         newTagPrompt: "Enter the name of the new tag:",
         deleteTitle: "Delete counter",
         menuTitle: "View tags",
         langBtn: "EN",
         errorNameRequired: "Please enter a name for the counter.",
         editTags: "Edit tags",
-        deleteTagConfirm: "Delete tag \"{name}\"? This won't affect counters already using it."
+        deleteTagConfirm: "Delete tag \"{name}\"? This won't affect counters already using it.",
+        resetSelectionConfirm: "Reset the {count} selected counters to 0?"
     }
 };
 
@@ -76,13 +84,75 @@ const tagsList = document.getElementById('tagsList');
 const pageTitle = document.getElementById('pageTitle');
 const langBtn = document.getElementById('langBtn');
 
+// Referencias para selección múltiple
+const mainHeader = document.getElementById('mainHeader');
+const selectionHeader = document.getElementById('selectionHeader');
+const selectionCount = document.getElementById('selectionCount');
+const cancelSelectionBtn = document.getElementById('cancelSelectionBtn');
+const editSelectionBtn = document.getElementById('editSelectionBtn');
+const resetSelectionBtn = document.getElementById('resetSelectionBtn');
+const deleteSelectionBtn = document.getElementById('deleteSelectionBtn');
+
 // Estado de la aplicación
 let counters = JSON.parse(localStorage.getItem('my_counters')) || [];
+// Asegurar que todos los contadores tengan un ID único para el tracking
+counters.forEach(c => { if (!c.id) c.id = Date.now() + Math.random(); });
+
 let customTags = JSON.parse(localStorage.getItem('my_custom_tags')) || [];
 let currentTag = 'Todos';
 let selectedColor = '#3498db';
 let currentLang = localStorage.getItem('my_app_lang') || 'es';
 let isEditingTags = false;
+let selectedCountersIDs = []; // IDs de los contadores seleccionados
+let editingIndex = null; // Índice del contador que se está editando
+let pressTimer;
+
+// --- INICIALIZACIÓN ---
+
+function init() {
+    setLanguage(currentLang);
+    setupCountersDragAndDrop();
+}
+
+function setupCountersDragAndDrop() {
+    countersContainer.addEventListener('dragover', e => {
+        e.preventDefault();
+        const dragging = document.querySelector('.counter-wrapper.dragging');
+        if (!dragging) return;
+
+        const afterElement = getDragAfterElement(countersContainer, e.clientY, e.clientX);
+        if (afterElement == null) {
+            countersContainer.appendChild(dragging);
+        } else {
+            countersContainer.insertBefore(dragging, afterElement);
+        }
+    });
+
+    countersContainer.addEventListener('drop', () => {
+        const t = translations[currentLang];
+        const draggables = Array.from(countersContainer.querySelectorAll('.counter-wrapper:not(.empty-msg)'));
+        const newOrderIDs = draggables.map(w => parseFloat(w.dataset.id));
+        
+        let newCounters = [...counters];
+        
+        if (currentTag === t.allTags) {
+            newCounters = newOrderIDs.map(id => counters.find(c => c.id === id));
+        } else {
+            const filteredIndices = counters
+                .map((c, i) => (c.tags && c.tags.includes(currentTag)) ? i : -1)
+                .filter(i => i !== -1);
+            
+            const reorderedFiltered = newOrderIDs.map(id => counters.find(c => c.id === id));
+            filteredIndices.forEach((originalIdx, i) => {
+                newCounters[originalIdx] = reorderedFiltered[i];
+            });
+        }
+        
+        counters = newCounters;
+        saveToLocalStorage();
+        renderCounters(); // Re-renderizar para asegurar que todo esté sincronizado
+    });
+}
 
 // --- MANEJO DE IDIOMA ---
 
@@ -236,17 +306,36 @@ function setupDragAndDrop() {
     });
 }
 
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.tag-item:not(.dragging)')];
+function getDragAfterElement(container, y, x) {
+    const selector = container === tagsList ? '.tag-item:not(.dragging)' : '.counter-wrapper:not(.dragging)';
+    const draggableElements = [...container.querySelectorAll(selector)];
+
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
+        
+        // Para listas verticales (tags)
+        if (container === tagsList) {
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            }
+        } 
+        // Para el grid de contadores
+        else {
+            const offsetY = y - box.top - box.height / 2;
+            const offsetX = x - box.left - box.width / 2;
+            
+            // Si estamos en la misma fila (aproximadamente)
+            if (Math.abs(offsetY) < box.height / 2) {
+                if (offsetX < 0 && offsetX > closest.offset) {
+                    return { offset: offsetX, element: child };
+                }
+            } else if (offsetY < 0 && offsetY > closest.offsetY) {
+                return { offset: offsetX, element: child, offsetY: offsetY };
+            }
         }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
+        return closest;
+    }, { offset: Number.NEGATIVE_INFINITY, offsetY: Number.NEGATIVE_INFINITY }).element;
 }
 
 function deleteCustomTag(tag) {
@@ -299,6 +388,11 @@ addTagBtn.addEventListener('click', () => {
 
 // Abrir modal al pulsar el FAB
 fabAdd.addEventListener('click', () => {
+    editingIndex = null;
+    const t = translations[currentLang];
+    document.getElementById('modalTitle').textContent = t.modalTitle;
+    document.getElementById('addBtn').textContent = t.confirm;
+
     counterNameInput.value = '';
     counterTagsInput.value = '';
     
@@ -343,9 +437,121 @@ cancelBtn.addEventListener('click', () => {
 // Manejar el submit del formulario del dialog
 counterDialog.querySelector('form').addEventListener('submit', (e) => {
     e.preventDefault();
-    addCounter();
+    if (editingIndex !== null) {
+        updateCounter();
+    } else {
+        addCounter();
+    }
     counterDialog.close();
 });
+
+// --- LÓGICA DE SELECCIÓN ---
+
+function updateSelectionUI() {
+    const t = translations[currentLang];
+    const isSelecting = selectedCountersIDs.length > 0;
+    
+    mainHeader.classList.toggle('hidden', isSelecting);
+    selectionHeader.classList.toggle('hidden', !isSelecting);
+    
+    selectionCount.textContent = selectedCountersIDs.length;
+    
+    // El botón editar solo se muestra si hay 1 seleccionado
+    editSelectionBtn.style.display = selectedCountersIDs.length === 1 ? 'flex' : 'none';
+}
+
+function clearSelection() {
+    selectedCountersIDs = [];
+    updateSelectionUI();
+    renderCounters();
+}
+
+function deleteSelectedCounters() {
+    const t = translations[currentLang];
+    if (confirm(t.deleteMultipleConfirm.replace('{count}', selectedCountersIDs.length))) {
+        // Filtramos el array de contadores para quitar los que tienen IDs seleccionados
+        counters = counters.filter(c => !selectedCountersIDs.includes(c.id));
+        saveToLocalStorage();
+        clearSelection();
+    }
+}
+
+function resetSelectedCounters() {
+    const t = translations[currentLang];
+    if (confirm(t.resetSelectionConfirm.replace('{count}', selectedCountersIDs.length))) {
+        counters.forEach(c => {
+            if (selectedCountersIDs.includes(c.id)) {
+                c.value = 0;
+            }
+        });
+        saveToLocalStorage();
+        clearSelection();
+    }
+}
+
+function openEditModal() {
+    if (selectedCountersIDs.length !== 1) return;
+    
+    const selectedID = selectedCountersIDs[0];
+    const idx = counters.findIndex(c => c.id === selectedID);
+    if (idx === -1) return;
+    
+    const counter = counters[idx];
+    editingIndex = idx;
+    
+    const t = translations[currentLang];
+    document.getElementById('modalTitle').textContent = t.modalTitleEdit;
+    document.getElementById('addBtn').textContent = t.confirmEdit;
+    
+    counterNameInput.value = counter.name;
+    counterTagsInput.value = counter.tags ? counter.tags.join(', ') : '';
+    selectedColor = counter.color;
+    
+    // Actualizar visualmente los presets
+    colorPresetsList.forEach(p => {
+        p.classList.toggle('active', p.dataset.color === selectedColor);
+    });
+    // Si es un color personalizado, mostrarlo en el botón custom
+    const isPreset = Array.from(colorPresetsList).some(p => p.dataset.color === selectedColor);
+    customBtn.style.backgroundColor = isPreset ? '#333' : selectedColor;
+    hiddenColorPicker.value = selectedColor;
+    
+    counterDialog.showModal();
+}
+
+function updateCounter() {
+    if (editingIndex === null) return;
+    
+    const name = counterNameInput.value.trim();
+    if (!name) return;
+    
+    const tagsRaw = counterTagsInput.value;
+    const tagsArray = tagsRaw.split(',')
+                             .map(t => t.trim())
+                             .filter(t => t !== '');
+    
+    counters[editingIndex].name = name;
+    counters[editingIndex].color = selectedColor;
+    counters[editingIndex].tags = tagsArray;
+    
+    // Asegurarnos de que las nuevas etiquetas estén en customTags si no existen
+    tagsArray.forEach(tag => {
+        if (!customTags.includes(tag)) {
+            customTags.push(tag);
+        }
+    });
+    localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
+    
+    saveToLocalStorage();
+    editingIndex = null;
+    clearSelection();
+    renderTags();
+}
+
+cancelSelectionBtn.addEventListener('click', clearSelection);
+deleteSelectionBtn.addEventListener('click', deleteSelectedCounters);
+resetSelectionBtn.addEventListener('click', resetSelectedCounters);
+editSelectionBtn.addEventListener('click', openEditModal);
 
 // Función para guardar el estado actual en el localStorage
 function saveToLocalStorage() {
@@ -362,7 +568,7 @@ function renderCounters() {
         : counters.filter(c => c.tags && c.tags.includes(currentTag));
 
     if (filteredCounters.length === 0) {
-        countersContainer.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #7f8c8d;">${t.emptyState}</p>`;
+        countersContainer.innerHTML = `<p class="empty-msg" style="grid-column: 1/-1; text-align: center; color: #7f8c8d;">${t.emptyState}</p>`;
         return;
     }
 
@@ -373,6 +579,59 @@ function renderCounters() {
         // Contenedor principal del ítem
         const wrapper = document.createElement('div');
         wrapper.className = 'counter-wrapper';
+        wrapper.dataset.id = counter.id;
+        if (selectedCountersIDs.includes(counter.id)) {
+            wrapper.classList.add('selected');
+        }
+        wrapper.draggable = false; // Se activará con el long-press
+
+        // Lógica de marcado (Long Press) y Selección
+        const handleToggleSelect = () => {
+            if (selectedCountersIDs.length > 0) {
+                if (selectedCountersIDs.includes(counter.id)) {
+                    selectedCountersIDs = selectedCountersIDs.filter(id => id !== counter.id);
+                } else {
+                    selectedCountersIDs.push(counter.id);
+                }
+                updateSelectionUI();
+                renderCounters();
+            }
+        };
+
+        const startPress = (e) => {
+            if (e.target.closest('.btn-control') || e.target.closest('.btn-delete')) return;
+            pressTimer = setTimeout(() => {
+                if (selectedCountersIDs.length === 0) {
+                    selectedCountersIDs.push(counter.id);
+                    updateSelectionUI();
+                    renderCounters();
+                    wrapper.draggable = true;
+                    if (window.navigator.vibrate) window.navigator.vibrate(50);
+                }
+            }, 600);
+        };
+
+        const endPress = () => {
+            clearTimeout(pressTimer);
+        };
+
+        wrapper.onclick = handleToggleSelect;
+        wrapper.addEventListener('mousedown', startPress);
+        wrapper.addEventListener('touchstart', startPress);
+        wrapper.addEventListener('mouseup', endPress);
+        wrapper.addEventListener('mouseleave', endPress);
+        wrapper.addEventListener('touchend', endPress);
+
+        // Eventos Drag & Drop
+        wrapper.addEventListener('dragstart', () => {
+            wrapper.classList.add('dragging');
+        });
+
+        wrapper.addEventListener('dragend', () => {
+            wrapper.classList.remove('dragging');
+            wrapper.classList.remove('selected');
+            wrapper.draggable = false;
+        });
 
         // Título fuera de la tarjeta (arriba)
         const title = document.createElement('div');
@@ -459,6 +718,7 @@ function addCounter() {
     }
 
     const newCounter = {
+        id: Date.now() + Math.random(),
         name: name,
         value: 0,
         color: color,
@@ -484,6 +744,7 @@ function deleteCounter(index) {
     if(confirm(t.deleteConfirm.replace('{name}', counterName))) {
         counters.splice(index, 1); // Lo quitamos del array
         saveToLocalStorage();
+        clearSelection(); // Limpiar selección por seguridad
         renderCounters();
     }
 }
@@ -494,5 +755,15 @@ function deleteCounter(index) {
 // Permitir añadir también pulsando la tecla "Enter" en el input
 // (Esto se maneja automáticamente con el submit del form en el dialog)
 
-// Renderizado inicial al cargar la página por primera vez
-setLanguage(currentLang);
+// Inicialización de la aplicación
+// Deseleccionar al hacer click fuera de un contador
+document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.counter-wrapper')) {
+        document.querySelectorAll('.counter-wrapper').forEach(w => {
+            w.classList.remove('selected');
+            w.draggable = false;
+        });
+    }
+});
+
+init();
