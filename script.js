@@ -11,7 +11,7 @@ const translations = {
         placeholderName: "Ej. Vasos de agua, Flexiones...",
         labelColor: "Color:",
         customColor: "Color personalizado",
-        labelTags: "Etiquetas (separadas por comas):",
+        labelTags: "Etiquetas:",
         placeholderTags: "Salud, Deporte, Leer...",
         cancel: "Cancelar",
         confirm: "Añadir",
@@ -39,7 +39,7 @@ const translations = {
         placeholderName: "e.g. Water glasses, Pushups...",
         labelColor: "Color:",
         customColor: "Custom Color",
-        labelTags: "Tags (comma separated):",
+        labelTags: "Tags:",
         placeholderTags: "Health, Sports, Reading...",
         cancel: "Cancel",
         confirm: "Add",
@@ -62,7 +62,7 @@ const translations = {
 
 // Referencias a los elementos del DOM
 const counterNameInput = document.getElementById('counterName');
-const counterTagsInput = document.getElementById('counterTags');
+const modalTagsList = document.getElementById('modalTagsList');
 const addBtn = document.getElementById('addBtn');
 const countersContainer = document.getElementById('countersContainer');
 const fabAdd = document.getElementById('fabAdd');
@@ -104,6 +104,7 @@ let selectedColor = '#3498db';
 let currentLang = localStorage.getItem('my_app_lang') || 'es';
 let isEditingTags = false;
 let selectedCountersIDs = []; // IDs de los contadores seleccionados
+let tempSelectedTags = []; // Etiquetas seleccionadas temporalmente en el modal
 let editingIndex = null; // Índice del contador que se está editando
 let pressTimer;
 
@@ -163,7 +164,12 @@ function setLanguage(lang) {
 
     // Actualizar textos en el DOM
     document.title = t.title;
-    pageTitle.textContent = currentTag === 'Todos' || currentTag === 'All' ? t.title : currentTag;
+    const isMainTitle = currentTag === 'Todos' || currentTag === 'All' || currentTag === t.allTags;
+    if (isMainTitle) {
+        pageTitle.textContent = t.title;
+    } else {
+        pageTitle.innerHTML = `<span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">sell</span>${currentTag}`;
+    }
     document.getElementById('sidebarTitle').textContent = t.sidebarTitle;
     document.getElementById('addTagText').textContent = t.addTag;
     document.getElementById('editTagsText').textContent = t.editTags;
@@ -177,7 +183,6 @@ function setLanguage(lang) {
 
     // Placeholders y titles
     counterNameInput.placeholder = t.placeholderName;
-    counterTagsInput.placeholder = t.placeholderTags;
     menuBtn.title = t.menuTitle;
     fabAdd.title = t.fabTitle;
     document.getElementById('customColorBtn').title = t.customColor;
@@ -249,7 +254,10 @@ function renderTags() {
 
         const text = document.createElement('span');
         text.className = 'tag-name';
-        text.textContent = tag;
+        text.dataset.name = tag; // Guardamos el nombre real sin icono
+        
+        const iconName = (tag === t.allTags) ? 'home' : 'sell';
+        text.innerHTML = `<span class="material-symbols-outlined tag-name-icon">${iconName}</span>${tag}`;
         item.appendChild(text);
 
         if (isEditingTags && tag !== t.allTags) {
@@ -271,7 +279,12 @@ function renderTags() {
         item.onclick = () => {
             if (isEditingTags) return;
             currentTag = tag;
-            pageTitle.textContent = tag === t.allTags ? t.title : tag;
+            const isMainTitle = tag === t.allTags;
+            if (isMainTitle) {
+                pageTitle.textContent = t.title;
+            } else {
+                pageTitle.innerHTML = `<span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">sell</span>${tag}`;
+            }
             renderCounters();
             closeSidebarMenu();
         };
@@ -299,7 +312,7 @@ function setupDragAndDrop() {
         e.preventDefault();
         const draggables = Array.from(tagsList.querySelectorAll('.tag-item:not(.all-tags)'));
         const newOrder = draggables
-            .map(item => item.querySelector('.tag-name').textContent);
+            .map(item => item.querySelector('.tag-name').dataset.name);
         
         customTags = newOrder;
         localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
@@ -354,7 +367,10 @@ function deleteCustomTag(tag) {
         });
         localStorage.setItem('my_counters', JSON.stringify(counters));
 
-        if (currentTag === tag) currentTag = t.allTags;
+        if (currentTag === tag) {
+            currentTag = t.allTags;
+            pageTitle.textContent = t.title;
+        }
         renderTags();
         renderCounters();
     }
@@ -394,7 +410,8 @@ fabAdd.addEventListener('click', () => {
     document.getElementById('addBtn').textContent = t.confirm;
 
     counterNameInput.value = '';
-    counterTagsInput.value = '';
+    tempSelectedTags = [];
+    renderModalTags();
     
     // Resetear color por defecto
     selectedColor = '#3498db';
@@ -504,7 +521,8 @@ function openEditModal() {
     document.getElementById('addBtn').textContent = t.confirmEdit;
     
     counterNameInput.value = counter.name;
-    counterTagsInput.value = counter.tags ? counter.tags.join(', ') : '';
+    tempSelectedTags = counter.tags ? [...counter.tags] : [];
+    renderModalTags();
     selectedColor = counter.color;
     
     // Actualizar visualmente los presets
@@ -525,10 +543,7 @@ function updateCounter() {
     const name = counterNameInput.value.trim();
     if (!name) return;
     
-    const tagsRaw = counterTagsInput.value;
-    const tagsArray = tagsRaw.split(',')
-                             .map(t => t.trim())
-                             .filter(t => t !== '');
+    const tagsArray = [...tempSelectedTags];
     
     counters[editingIndex].name = name;
     counters[editingIndex].color = selectedColor;
@@ -658,7 +673,12 @@ function renderCounters() {
         // Contenedor de etiquetas dentro de la tarjeta
         const tagsDisplay = document.createElement('div');
         tagsDisplay.className = 'counter-tags-display';
-        if (counter.tags) {
+        if (counter.tags && counter.tags.length > 0) {
+            const tagIcon = document.createElement('span');
+            tagIcon.className = 'material-symbols-outlined card-tag-icon';
+            tagIcon.textContent = 'sell';
+            tagsDisplay.appendChild(tagIcon);
+
             counter.tags.forEach(t => {
                 const badge = document.createElement('span');
                 badge.className = 'tag-badge';
@@ -700,17 +720,67 @@ function renderCounters() {
     });
 }
 
+// --- LÓGICA DEL MODAL DE ETIQUETAS ---
+
+function renderModalTags() {
+    modalTagsList.innerHTML = '';
+    const t = translations[currentLang];
+
+    // Obtener todas las etiquetas disponibles (incluyendo las de los contadores)
+    const allAvailableTags = new Set(customTags);
+    counters.forEach(c => {
+        if (c.tags) {
+            c.tags.forEach(tag => allAvailableTags.add(tag));
+        }
+    });
+
+    // Ordenar alfabéticamente
+    const sortedTags = Array.from(allAvailableTags).sort();
+
+    sortedTags.forEach(tag => {
+        const pill = document.createElement('div');
+        pill.className = `modal-tag-pill ${tempSelectedTags.includes(tag) ? 'selected' : ''}`;
+        pill.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">sell</span>${tag}`;
+        pill.onclick = () => {
+            if (tempSelectedTags.includes(tag)) {
+                tempSelectedTags = tempSelectedTags.filter(t => t !== tag);
+            } else {
+                tempSelectedTags.push(tag);
+            }
+            renderModalTags();
+        };
+        modalTagsList.appendChild(pill);
+    });
+
+    // Botón para añadir nueva etiqueta desde el modal
+    const addPill = document.createElement('button');
+    addPill.type = 'button';
+    addPill.className = 'modal-tag-add';
+    addPill.textContent = `+ ${t.addTag}`;
+    addPill.onclick = () => {
+        const newTagName = prompt(t.newTagPrompt);
+        if (newTagName && newTagName.trim() !== '') {
+            const tag = newTagName.trim();
+            if (!customTags.includes(tag)) {
+                customTags.push(tag);
+                localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
+                renderTags(); // Actualizar el sidebar
+            }
+            if (!tempSelectedTags.includes(tag)) {
+                tempSelectedTags.push(tag);
+            }
+            renderModalTags();
+        }
+    };
+    modalTagsList.appendChild(addPill);
+}
+
 // Función para añadir un nuevo contador
 function addCounter() {
     const t = translations[currentLang];
     const name = counterNameInput.value.trim();
     const color = selectedColor; // Usar la variable seleccionada
-    const tagsRaw = counterTagsInput.value;
-    
-    // Procesar etiquetas (limpiar espacios y quitar vacías)
-    const tags = tagsRaw.split(',')
-        .map(t => t.trim())
-        .filter(t => t !== '');
+    const tags = [...tempSelectedTags];
 
     if (name === '') {
         alert(t.errorNameRequired);

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Counters</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 </head>
 <body>
 
@@ -31,7 +32,7 @@
     <!-- Sidebar para etiquetas -->
     <aside id="sidebar" class="sidebar">
         <div class="sidebar-header">
-            <h3 id="sidebarTitle">Etiquetas</h3>
+            <h3><span class="material-symbols-outlined tag-header-icon">sell</span> <span id="sidebarTitle">Etiquetas</span></h3>
             <button id="closeSidebar" class="close-sidebar">&times;</button>
         </div>
         <nav id="tagsList" class="tags-list">
@@ -80,9 +81,11 @@
                     </div>
                 </div>
 
-                <div class="tags-input-group">
-                    <label for="counterTags" id="labelTags">Etiquetas (separadas por comas):</label>
-                    <input type="text" id="counterTags" placeholder="Salud, Deporte, Leer...">
+                <div class="tags-selection-container">
+                    <label><span class="material-symbols-outlined label-tag-icon">sell</span> <span id="labelTags">Etiquetas:</span></label>
+                    <div id="modalTagsList" class="modal-tags-list">
+                        <!-- Se cargarán dinámicamente -->
+                    </div>
                 </div>
             </div>
             <div class="modal-actions">
