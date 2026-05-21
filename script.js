@@ -622,17 +622,34 @@ function renderCounters() {
                     renderCounters();
                     wrapper.draggable = true;
                     if (window.navigator.vibrate) window.navigator.vibrate(50);
+                } else if (selectedCountersIDs.includes(counter.id)) {
+                    // Si ya hay selección y este está seleccionado, permitimos arrastrar
+                    wrapper.draggable = true;
+                    if (window.navigator.vibrate) window.navigator.vibrate(50);
                 }
             }, 600);
+        };
+
+        const handleMove = () => {
+            clearTimeout(pressTimer);
         };
 
         const endPress = () => {
             clearTimeout(pressTimer);
         };
 
-        wrapper.onclick = handleToggleSelect;
+        wrapper.onclick = (e) => {
+            if (wrapper.dataset.isDragging === 'true') {
+                wrapper.dataset.isDragging = 'false';
+                return;
+            }
+            handleToggleSelect();
+        };
+
         wrapper.addEventListener('mousedown', startPress);
         wrapper.addEventListener('touchstart', startPress);
+        wrapper.addEventListener('mousemove', handleMove);
+        wrapper.addEventListener('touchmove', handleMove);
         wrapper.addEventListener('mouseup', endPress);
         wrapper.addEventListener('mouseleave', endPress);
         wrapper.addEventListener('touchend', endPress);
@@ -640,11 +657,11 @@ function renderCounters() {
         // Eventos Drag & Drop
         wrapper.addEventListener('dragstart', () => {
             wrapper.classList.add('dragging');
+            wrapper.dataset.isDragging = 'true';
         });
 
         wrapper.addEventListener('dragend', () => {
             wrapper.classList.remove('dragging');
-            wrapper.classList.remove('selected');
             wrapper.draggable = false;
         });
 
