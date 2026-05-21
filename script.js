@@ -1,3 +1,51 @@
+// --- TRADUCCIONES ---
+const translations = {
+    es: {
+        title: "Mis Contadores",
+        sidebarTitle: "Etiquetas",
+        addTag: "Añadir etiqueta",
+        allTags: "Todos",
+        fabTitle: "Añadir nuevo contador",
+        modalTitle: "Nuevo Contador",
+        placeholderName: "Ej. Vasos de agua, Flexiones...",
+        labelColor: "Color:",
+        customColor: "Color personalizado",
+        labelTags: "Etiquetas (separadas por comas):",
+        placeholderTags: "Salud, Deporte, Leer...",
+        cancel: "Cancelar",
+        confirm: "Añadir",
+        emptyState: "No hay contadores. ¡Añade uno con el botón de abajo a la derecha!",
+        deleteConfirm: "¿Estás seguro de que quieres borrar \"{name}\"?",
+        newTagPrompt: "Introduce el nombre de la nueva etiqueta:",
+        deleteTitle: "Eliminar contador",
+        menuTitle: "Ver etiquetas",
+        langBtn: "ES",
+        errorNameRequired: "Por favor, escribe un nombre para el contador."
+    },
+    en: {
+        title: "My Counters",
+        sidebarTitle: "Tags",
+        addTag: "Add tag",
+        allTags: "All",
+        fabTitle: "Add new counter",
+        modalTitle: "New Counter",
+        placeholderName: "e.g. Water glasses, Pushups...",
+        labelColor: "Color:",
+        customColor: "Custom Color",
+        labelTags: "Tags (comma separated):",
+        placeholderTags: "Health, Sports, Reading...",
+        cancel: "Cancel",
+        confirm: "Add",
+        emptyState: "No counters yet. Add one with the button below!",
+        deleteConfirm: "Are you sure you want to delete \"{name}\"?",
+        newTagPrompt: "Enter the name of the new tag:",
+        deleteTitle: "Delete counter",
+        menuTitle: "View tags",
+        langBtn: "EN",
+        errorNameRequired: "Please enter a name for the counter."
+    }
+};
+
 // --- LÓGICA DE JAVASCRIPT ---
 
 // Referencias a los elementos del DOM
@@ -21,12 +69,54 @@ const closeSidebar = document.getElementById('closeSidebar');
 const addTagBtn = document.getElementById('addTagBtn');
 const tagsList = document.getElementById('tagsList');
 const pageTitle = document.getElementById('pageTitle');
+const langBtn = document.getElementById('langBtn');
 
 // Estado de la aplicación
 let counters = JSON.parse(localStorage.getItem('my_counters')) || [];
-let customTags = JSON.parse(localStorage.getItem('my_custom_tags')) || []; // Etiquetas creadas manualmente
+let customTags = JSON.parse(localStorage.getItem('my_custom_tags')) || [];
 let currentTag = 'Todos';
-let selectedColor = '#3498db'; // Color por defecto
+let selectedColor = '#3498db';
+let currentLang = localStorage.getItem('my_app_lang') || 'es';
+
+// --- MANEJO DE IDIOMA ---
+
+function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('my_app_lang', lang);
+    const t = translations[lang];
+
+    // Actualizar textos en el DOM
+    document.title = t.title;
+    pageTitle.textContent = currentTag === 'Todos' || currentTag === 'All' ? t.title : currentTag;
+    document.getElementById('sidebarTitle').textContent = t.sidebarTitle;
+    document.getElementById('addTagText').textContent = t.addTag;
+    document.getElementById('modalTitle').textContent = t.modalTitle;
+    document.getElementById('labelColor').textContent = t.labelColor;
+    document.getElementById('labelTags').textContent = t.labelTags;
+    document.getElementById('cancelBtn').textContent = t.cancel;
+    document.getElementById('addBtn').textContent = t.confirm;
+    langBtn.textContent = t.langBtn;
+
+    // Placeholders y titles
+    counterNameInput.placeholder = t.placeholderName;
+    counterTagsInput.placeholder = t.placeholderTags;
+    menuBtn.title = t.menuTitle;
+    fabAdd.title = t.fabTitle;
+    document.getElementById('customColorBtn').title = t.customColor;
+
+    // Si el currentTag es el especial "Todos/All", lo actualizamos
+    if (currentTag === 'Todos' || currentTag === 'All') {
+        currentTag = t.allTags;
+    }
+
+    renderTags();
+    renderCounters();
+}
+
+langBtn.addEventListener('click', () => {
+    const nextLang = currentLang === 'es' ? 'en' : 'es';
+    setLanguage(nextLang);
+});
 
 // --- MANEJO DE ETIQUETAS Y SIDEBAR ---
 
@@ -43,19 +133,20 @@ function closeSidebarMenu() {
 
 function renderTags() {
     tagsList.innerHTML = '';
+    const t = translations[currentLang];
     
     // Obtener todas las etiquetas únicas de los contadores existentes
     const tagsFromCounters = new Set();
     counters.forEach(c => {
         if (c.tags) {
-            c.tags.forEach(t => tagsFromCounters.add(t));
+            c.tags.forEach(tag => tagsFromCounters.add(tag));
         }
     });
 
     // Combinar con las etiquetas creadas manualmente
     const allTags = new Set([...Array.from(tagsFromCounters), ...customTags]);
 
-    const tagsArray = ['Todos', ...Array.from(allTags).sort()];
+    const tagsArray = [t.allTags, ...Array.from(allTags).sort()];
 
     tagsArray.forEach(tag => {
         const item = document.createElement('div');
@@ -63,7 +154,7 @@ function renderTags() {
         item.textContent = tag;
         item.onclick = () => {
             currentTag = tag;
-            pageTitle.textContent = tag === 'Todos' ? 'Mis Contadores' : tag;
+            pageTitle.textContent = tag === t.allTags ? t.title : tag;
             renderCounters();
             closeSidebarMenu();
         };
@@ -76,7 +167,8 @@ closeSidebar.addEventListener('click', closeSidebarMenu);
 sidebarOverlay.addEventListener('click', closeSidebarMenu);
 
 addTagBtn.addEventListener('click', () => {
-    const newTagScreen = prompt('Introduce el nombre de la nueva etiqueta:');
+    const t = translations[currentLang];
+    const newTagScreen = prompt(t.newTagPrompt);
     if (newTagScreen && newTagScreen.trim() !== '') {
         const tag = newTagScreen.trim();
         
@@ -148,13 +240,14 @@ function saveToLocalStorage() {
 // Función encargada de pintar los contadores en pantalla
 function renderCounters() {
     countersContainer.innerHTML = ''; // Limpiamos el contenedor
+    const t = translations[currentLang];
 
-    const filteredCounters = currentTag === 'Todos' 
+    const filteredCounters = (currentTag === t.allTags) 
         ? counters 
         : counters.filter(c => c.tags && c.tags.includes(currentTag));
 
     if (filteredCounters.length === 0) {
-        countersContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #7f8c8d;">No hay contadores. ¡Añade uno con el botón de abajo a la derecha!</p>';
+        countersContainer.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #7f8c8d;">${t.emptyState}</p>`;
         return;
     }
 
@@ -180,7 +273,7 @@ function renderCounters() {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn-delete';
         deleteBtn.innerHTML = '&times;';
-        deleteBtn.title = 'Eliminar contador';
+        deleteBtn.title = t.deleteTitle;
         deleteBtn.onclick = () => deleteCounter(originalIndex);
 
         // Valor numérico
@@ -235,6 +328,7 @@ function renderCounters() {
 
 // Función para añadir un nuevo contador
 function addCounter() {
+    const t = translations[currentLang];
     const name = counterNameInput.value.trim();
     const color = selectedColor; // Usar la variable seleccionada
     const tagsRaw = counterTagsInput.value;
@@ -245,7 +339,7 @@ function addCounter() {
         .filter(t => t !== '');
 
     if (name === '') {
-        alert('Por favor, escribe un nombre para el contador.');
+        alert(t.errorNameRequired);
         return;
     }
 
@@ -270,7 +364,9 @@ function updateValue(index, change) {
 
 // Función para eliminar un contador
 function deleteCounter(index) {
-    if(confirm(`¿Estás seguro de que quieres borrar "${counters[index].name}"?`)) {
+    const t = translations[currentLang];
+    const counterName = counters[index].name;
+    if(confirm(t.deleteConfirm.replace('{name}', counterName))) {
         counters.splice(index, 1); // Lo quitamos del array
         saveToLocalStorage();
         renderCounters();
@@ -284,4 +380,4 @@ function deleteCounter(index) {
 // (Esto se maneja automáticamente con el submit del form en el dialog)
 
 // Renderizado inicial al cargar la página por primera vez
-renderCounters();
+setLanguage(currentLang);

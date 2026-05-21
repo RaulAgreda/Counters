@@ -25,10 +25,34 @@ header {
     background: var(--bg-color);
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 0 20px;
     box-sizing: border-box;
     z-index: 90;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.lang-btn {
+    background: #333;
+    color: white;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.lang-btn:hover {
+    background: #444;
+    border-color: #555;
 }
 
 .menu-btn {

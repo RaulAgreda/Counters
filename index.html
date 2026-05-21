@@ -11,12 +11,15 @@
     <header>
         <button id="menuBtn" class="menu-btn" title="Ver etiquetas">☰</button>
         <h1 id="pageTitle">Mis Contadores</h1>
+        <div class="header-actions">
+            <button id="langBtn" class="lang-btn" title="Cambiar idioma">ES</button>
+        </div>
     </header>
 
     <!-- Sidebar para etiquetas -->
     <aside id="sidebar" class="sidebar">
         <div class="sidebar-header">
-            <h3>Etiquetas</h3>
+            <h3 id="sidebarTitle">Etiquetas</h3>
             <button id="closeSidebar" class="close-sidebar">&times;</button>
         </div>
         <nav id="tagsList" class="tags-list">
@@ -24,7 +27,7 @@
         </nav>
         <div class="sidebar-footer">
             <button id="addTagBtn" class="add-tag-footer-btn">
-                <span>+</span> Añadir etiqueta
+                <span id="addTagIcon">+</span> <span id="addTagText">Añadir etiqueta</span>
             </button>
         </div>
     </aside>
@@ -39,13 +42,13 @@
     <!-- Modal (Dialog) para crear nuevo contador -->
     <dialog id="counterDialog" class="counter-modal">
         <form method="dialog">
-            <h2>Nuevo Contador</h2>
+            <h2 id="modalTitle">Nuevo Contador</h2>
             <div class="modal-body">
                 <input type="text" id="counterName" placeholder="Ej. Vasos de agua, Flexiones..." maxlength="30" required>
                 
                 <div class="form-row">
                     <div class="color-selection-group">
-                        <label>Color:</label>
+                        <label id="labelColor">Color:</label>
                         <div class="color-presets" id="colorPresets">
                             <button type="button" class="color-preset active" style="background-color: #3498db;" data-color="#3498db"></button>
                             <button type="button" class="color-preset" style="background-color: #e100ff;" data-color="#e100ff"></button>
@@ -63,7 +66,7 @@
                 </div>
 
                 <div class="tags-input-group">
-                    <label for="counterTags">Etiquetas (separadas por comas):</label>
+                    <label for="counterTags" id="labelTags">Etiquetas (separadas por comas):</label>
                     <input type="text" id="counterTags" placeholder="Salud, Deporte, Leer...">
                 </div>
             </div>
