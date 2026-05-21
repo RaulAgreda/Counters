@@ -8,17 +8,71 @@
 </head>
 <body>
 
-    <h1>Mis Contadores</h1>
+    <header>
+        <button id="menuBtn" class="menu-btn" title="Ver etiquetas">☰</button>
+        <h1 id="pageTitle">Mis Contadores</h1>
+    </header>
 
-    <!-- Panel para crear un nuevo contador -->
-    <div class="creator-panel">
-        <input type="text" id="counterName" placeholder="Ej. Vasos de agua, Flexiones..." maxlength="30">
-        <input type="color" id="counterColor" value="#3498db">
-        <button id="addBtn">Añadir</button>
-    </div>
+    <!-- Sidebar para etiquetas -->
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h3>Etiquetas</h3>
+            <button id="closeSidebar" class="close-sidebar">&times;</button>
+        </div>
+        <nav id="tagsList" class="tags-list">
+            <!-- Se cargará por JS -->
+        </nav>
+        <div class="sidebar-footer">
+            <button id="addTagBtn" class="add-tag-footer-btn">
+                <span>+</span> Añadir etiqueta
+            </button>
+        </div>
+    </aside>
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
     <!-- Grid donde se pintarán los contadores -->
     <div class="counters-container" id="countersContainer"></div>
+
+    <!-- Botón flotante -->
+    <button id="fabAdd" class="fab-btn" title="Añadir nuevo contador">+</button>
+
+    <!-- Modal (Dialog) para crear nuevo contador -->
+    <dialog id="counterDialog" class="counter-modal">
+        <form method="dialog">
+            <h2>Nuevo Contador</h2>
+            <div class="modal-body">
+                <input type="text" id="counterName" placeholder="Ej. Vasos de agua, Flexiones..." maxlength="30" required>
+                
+                <div class="form-row">
+                    <div class="color-selection-group">
+                        <label>Color:</label>
+                        <div class="color-presets" id="colorPresets">
+                            <button type="button" class="color-preset active" style="background-color: #3498db;" data-color="#3498db"></button>
+                            <button type="button" class="color-preset" style="background-color: #e100ff;" data-color="#e100ff"></button>
+                            <button type="button" class="color-preset" style="background-color: #e74c3c;" data-color="#e74c3c"></button>
+                            <button type="button" class="color-preset" style="background-color: #2ecc71;" data-color="#2ecc71"></button>
+                            <button type="button" class="color-preset" style="background-color: #f1c40f;" data-color="#f1c40f"></button>
+                            <div class="color-custom-container">
+                                <button type="button" id="customColorBtn" class="color-preset custom-btn" title="Color personalizado">
+                                    <span class="edit-icon">✎</span>
+                                </button>
+                                <input type="color" id="counterColor" value="#3498db" class="hidden-color-picker">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tags-input-group">
+                    <label for="counterTags">Etiquetas (separadas por comas):</label>
+                    <input type="text" id="counterTags" placeholder="Salud, Deporte, Leer...">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelBtn" class="btn-cancel">Cancelar</button>
+                <button type="submit" id="addBtn" class="btn-confirm">Añadir</button>
+            </div>
+        </form>
+    </dialog>
 
     <script src="script.js"></script>
 </body>
