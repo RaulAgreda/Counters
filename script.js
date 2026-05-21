@@ -26,9 +26,7 @@ const translations = {
         errorNameRequired: "Por favor, escribe un nombre para el contador.",
         editTags: "Editar etiquetas",
         deleteTagConfirm: "¿Borrar la etiqueta \"{name}\"? Esto no afectará a los contadores que ya la tengan.",
-        resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?",
-        confirmTitle: "Confirmar",
-        ok: "Aceptar"
+        resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?"
     },
     en: {
         title: "My Counters",
@@ -56,9 +54,7 @@ const translations = {
         errorNameRequired: "Please enter a name for the counter.",
         editTags: "Edit tags",
         deleteTagConfirm: "Delete tag \"{name}\"? This won't affect counters already using it.",
-        resetSelectionConfirm: "Reset the {count} selected counters to 0?",
-        confirmTitle: "Confirm",
-        ok: "OK"
+        resetSelectionConfirm: "Reset the {count} selected counters to 0?"
     }
 };
 
@@ -97,15 +93,6 @@ const editSelectionBtn = document.getElementById('editSelectionBtn');
 const resetSelectionBtn = document.getElementById('resetSelectionBtn');
 const deleteSelectionBtn = document.getElementById('deleteSelectionBtn');
 
-// Referencias para el diálogo custom
-const customConfirmDialog = document.getElementById('customConfirmDialog');
-const confirmTitle = document.getElementById('confirmTitle');
-const confirmMessage = document.getElementById('confirmMessage');
-const promptContainer = document.getElementById('promptContainer');
-const confirmInput = document.getElementById('confirmInput');
-const confirmCancelBtn = document.getElementById('confirmCancelBtn');
-const confirmOkBtn = document.getElementById('confirmOkBtn');
-
 // Estado de la aplicación
 let counters = JSON.parse(localStorage.getItem('my_counters')) || [];
 // Asegurar que todos los contadores tengan un ID único para el tracking
@@ -120,53 +107,6 @@ let selectedCountersIDs = []; // IDs de los contadores seleccionados
 let tempSelectedTags = []; // Etiquetas seleccionadas temporalmente en el modal
 let editingIndex = null; // Índice del contador que se está editando
 let pressTimer;
-
-// --- DIÁLOGOS CUSTOM ---
-
-/**
- * Función genérica para mostrar un diálogo de confirmación o un prompt.
- * @param {string} title - Título del modal.
- * @param {string} message - Mensaje del modal.
- * @param {boolean} isPrompt - Si debe mostrar un campo de texto.
- * @param {string} defaultValue - Valor por defecto para el prompt.
- * @returns {Promise} - Devuelve el valor del prompt o true/false.
- */
-function showCustomDialog(title, message, isPrompt = false, defaultValue = '') {
-    return new Promise((resolve) => {
-        const t = translations[currentLang];
-        confirmTitle.textContent = title;
-        confirmMessage.textContent = message;
-        confirmCancelBtn.textContent = t.cancel;
-        confirmOkBtn.textContent = t.ok || t.confirm || 'OK';
-        
-        if (isPrompt) {
-            promptContainer.classList.remove('hidden');
-            confirmInput.value = defaultValue;
-            setTimeout(() => confirmInput.focus(), 100);
-        } else {
-            promptContainer.classList.add('hidden');
-        }
-
-        const cleanup = () => {
-            confirmOkBtn.onclick = null;
-            confirmCancelBtn.onclick = null;
-            customConfirmDialog.close();
-        };
-
-        confirmOkBtn.onclick = () => {
-            const result = isPrompt ? confirmInput.value : true;
-            cleanup();
-            resolve(result);
-        };
-
-        confirmCancelBtn.onclick = () => {
-            cleanup();
-            resolve(isPrompt ? null : false);
-        };
-
-        customConfirmDialog.showModal();
-    });
-}
 
 // --- INICIALIZACIÓN ---
 
@@ -321,16 +261,6 @@ function renderTags() {
         item.appendChild(text);
 
         if (isEditingTags && tag !== t.allTags) {
-            // Botón editar etiqueta
-            const editTagBtn = document.createElement('button');
-            editTagBtn.className = 'btn-edit-tag';
-            editTagBtn.innerHTML = '✎';
-            editTagBtn.onclick = (e) => {
-                e.stopPropagation();
-                editCustomTagName(tag);
-            };
-            item.appendChild(editTagBtn);
-
             // Botón eliminar etiqueta
             const deleteTagBtn = document.createElement('button');
             deleteTagBtn.className = 'btn-delete-tag';
@@ -421,40 +351,26 @@ function getDragAfterElement(container, y, x) {
     }, { offset: Number.NEGATIVE_INFINITY, offsetY: Number.NEGATIVE_INFINITY }).element;
 }
 
-async function deleteCustomTag(tag) {
+function deleteCustomTag(tag) {
     const t = translations[currentLang];
-    const confirmed = await showCustomDialog(t.deleteTitle, t.deleteTagConfirm.replace('{name}', tag));
-    if (confirmed) {
-        // ... (existing code for deletion)
-    }
-}
-
-async function editCustomTagName(oldTag) {
-    const t = translations[currentLang];
-    const newName = await showCustomDialog(t.editTags, t.newTagPrompt, true, oldTag);
-    
-    if (newName && newName.trim() !== '' && newName.trim() !== oldTag) {
-        const newTag = newName.trim();
-
-        // 1. Actualizar en customTags
-        customTags = customTags.map(tag => tag === oldTag ? newTag : tag);
+    if (confirm(t.deleteTagConfirm.replace('{name}', tag))) {
+        // Eliminar de las etiquetas personalizadas
+        customTags = customTags.filter(at => at !== tag);
         localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
 
-        // 2. Actualizar en los contadores
+        // Eliminar la etiqueta de todos los contadores
         counters = counters.map(counter => {
             if (counter.tags) {
-                counter.tags = counter.tags.map(t => t === oldTag ? newTag : t);
+                counter.tags = counter.tags.filter(t => t !== tag);
             }
             return counter;
         });
         localStorage.setItem('my_counters', JSON.stringify(counters));
 
-        // 3. Si era la etiqueta actual seleccionada, actualizarla
-        if (currentTag === oldTag) {
-            currentTag = newTag;
-            pageTitle.innerHTML = `<span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">sell</span>${currentTag}`;
+        if (currentTag === tag) {
+            currentTag = t.allTags;
+            pageTitle.textContent = t.title;
         }
-
         renderTags();
         renderCounters();
     }
@@ -470,9 +386,9 @@ editTagsBtn.addEventListener('click', () => {
     renderTags();
 });
 
-addTagBtn.addEventListener('click', async () => {
+addTagBtn.addEventListener('click', () => {
     const t = translations[currentLang];
-    const newTagScreen = await showCustomDialog(t.addTag, t.newTagPrompt, true);
+    const newTagScreen = prompt(t.newTagPrompt);
     if (newTagScreen && newTagScreen.trim() !== '') {
         const tag = newTagScreen.trim();
         
@@ -495,6 +411,9 @@ fabAdd.addEventListener('click', () => {
 
     counterNameInput.value = '';
     tempSelectedTags = [];
+    if (currentTag !== t.allTags) {
+        tempSelectedTags.push(currentTag);
+    }
     renderModalTags();
     
     // Resetear color por defecto
@@ -567,10 +486,9 @@ function clearSelection() {
     renderCounters();
 }
 
-async function deleteSelectedCounters() {
+function deleteSelectedCounters() {
     const t = translations[currentLang];
-    const confirmed = await showCustomDialog(t.deleteTitle, t.deleteMultipleConfirm.replace('{count}', selectedCountersIDs.length));
-    if (confirmed) {
+    if (confirm(t.deleteMultipleConfirm.replace('{count}', selectedCountersIDs.length))) {
         // Filtramos el array de contadores para quitar los que tienen IDs seleccionados
         counters = counters.filter(c => !selectedCountersIDs.includes(c.id));
         saveToLocalStorage();
@@ -578,10 +496,9 @@ async function deleteSelectedCounters() {
     }
 }
 
-async function resetSelectedCounters() {
+function resetSelectedCounters() {
     const t = translations[currentLang];
-    const confirmed = await showCustomDialog(t.confirmEdit, t.resetSelectionConfirm.replace('{count}', selectedCountersIDs.length));
-    if (confirmed) {
+    if (confirm(t.resetSelectionConfirm.replace('{count}', selectedCountersIDs.length))) {
         counters.forEach(c => {
             if (selectedCountersIDs.includes(c.id)) {
                 c.value = 0;
@@ -708,34 +625,17 @@ function renderCounters() {
                     renderCounters();
                     wrapper.draggable = true;
                     if (window.navigator.vibrate) window.navigator.vibrate(50);
-                } else if (selectedCountersIDs.includes(counter.id)) {
-                    // Si ya hay selección y este está seleccionado, permitimos arrastrar
-                    wrapper.draggable = true;
-                    if (window.navigator.vibrate) window.navigator.vibrate(50);
                 }
             }, 600);
-        };
-
-        const handleMove = () => {
-            clearTimeout(pressTimer);
         };
 
         const endPress = () => {
             clearTimeout(pressTimer);
         };
 
-        wrapper.onclick = (e) => {
-            if (wrapper.dataset.isDragging === 'true') {
-                wrapper.dataset.isDragging = 'false';
-                return;
-            }
-            handleToggleSelect();
-        };
-
+        wrapper.onclick = handleToggleSelect;
         wrapper.addEventListener('mousedown', startPress);
         wrapper.addEventListener('touchstart', startPress);
-        wrapper.addEventListener('mousemove', handleMove);
-        wrapper.addEventListener('touchmove', handleMove);
         wrapper.addEventListener('mouseup', endPress);
         wrapper.addEventListener('mouseleave', endPress);
         wrapper.addEventListener('touchend', endPress);
@@ -743,11 +643,11 @@ function renderCounters() {
         // Eventos Drag & Drop
         wrapper.addEventListener('dragstart', () => {
             wrapper.classList.add('dragging');
-            wrapper.dataset.isDragging = 'true';
         });
 
         wrapper.addEventListener('dragend', () => {
             wrapper.classList.remove('dragging');
+            wrapper.classList.remove('selected');
             wrapper.draggable = false;
         });
 
@@ -860,8 +760,8 @@ function renderModalTags() {
     addPill.type = 'button';
     addPill.className = 'modal-tag-add';
     addPill.textContent = `+ ${t.addTag}`;
-    addPill.onclick = async () => {
-        const newTagName = await showCustomDialog(t.addTag, t.newTagPrompt, true);
+    addPill.onclick = () => {
+        const newTagName = prompt(t.newTagPrompt);
         if (newTagName && newTagName.trim() !== '') {
             const tag = newTagName.trim();
             if (!customTags.includes(tag)) {
@@ -898,6 +798,14 @@ function addCounter() {
         tags: tags
     };
 
+    // Asegurarnos de que las nuevas etiquetas estén en customTags si no existen
+    tags.forEach(tag => {
+        if (!customTags.includes(tag)) {
+            customTags.push(tag);
+        }
+    });
+    localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
+
     counters.push(newCounter);
     saveToLocalStorage();
     renderCounters();
@@ -911,11 +819,10 @@ function updateValue(index, change) {
 }
 
 // Función para eliminar un contador
-async function deleteCounter(index) {
+function deleteCounter(index) {
     const t = translations[currentLang];
     const counterName = counters[index].name;
-    const confirmed = await showCustomDialog(t.deleteTitle, t.deleteConfirm.replace('{name}', counterName));
-    if(confirmed) {
+    if(confirm(t.deleteConfirm.replace('{name}', counterName))) {
         counters.splice(index, 1); // Lo quitamos del array
         saveToLocalStorage();
         clearSelection(); // Limpiar selección por seguridad
