@@ -55,6 +55,20 @@
     <!-- Botón flotante -->
     <button id="fabAdd" class="fab-btn" title="Añadir nuevo contador">+</button>
 
+    <!-- Modal para etiquetas -->
+    <dialog id="tagDialog" class="counter-modal">
+        <form method="dialog">
+            <h2 id="modalTitleTag">Nueva Etiqueta</h2>
+            <div class="modal-body">
+                <input type="text" id="tagNameInput" placeholder="Ej. Salud, Deporte..." maxlength="20" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelTagBtn" class="btn-cancel">Cancelar</button>
+                <button type="submit" id="confirmTagBtn" class="btn-confirm">Añadir</button>
+            </div>
+        </form>
+    </dialog>
+
     <!-- Modal (Dialog) para crear nuevo contador -->
     <dialog id="counterDialog" class="counter-modal">
         <form method="dialog">

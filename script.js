@@ -20,6 +20,8 @@ const translations = {
         deleteConfirm: "¿Estás seguro de que quieres borrar \"{name}\"?",
         deleteMultipleConfirm: "¿Estás seguro de que quieres borrar {count} contadores?",
         newTagPrompt: "Introduce el nombre de la nueva etiqueta:",
+        modalTitleTag: "Nueva Etiqueta",
+        placeholderTag: "Ej. Salud, Deporte...",
         deleteTitle: "Eliminar contador",
         menuTitle: "Ver etiquetas",
         langBtn: "ES",
@@ -48,6 +50,8 @@ const translations = {
         deleteConfirm: "Are you sure you want to delete \"{name}\"?",
         deleteMultipleConfirm: "Are you sure you want to delete {count} counters?",
         newTagPrompt: "Enter the name of the new tag:",
+        modalTitleTag: "New Tag",
+        placeholderTag: "e.g. Health, Sports...",
         deleteTitle: "Delete counter",
         menuTitle: "View tags",
         langBtn: "EN",
@@ -68,6 +72,12 @@ const countersContainer = document.getElementById('countersContainer');
 const fabAdd = document.getElementById('fabAdd');
 const counterDialog = document.getElementById('counterDialog');
 const cancelBtn = document.getElementById('cancelBtn');
+
+// Referencias para el diálogo de etiquetas
+const tagDialog = document.getElementById('tagDialog');
+const tagNameInput = document.getElementById('tagNameInput');
+const cancelTagBtn = document.getElementById('cancelTagBtn');
+const modalTitleTag = document.getElementById('modalTitleTag');
 
 // Referencias para el selector de color
 const colorPresetsList = document.querySelectorAll('.color-preset');
@@ -106,6 +116,7 @@ let isEditingTags = false;
 let selectedCountersIDs = []; // IDs de los contadores seleccionados
 let tempSelectedTags = []; // Etiquetas seleccionadas temporalmente en el modal
 let editingIndex = null; // Índice del contador que se está editando
+let tagSubmitCallback = null; // Callback para el diálogo de etiquetas
 let pressTimer;
 
 // --- INICIALIZACIÓN ---
@@ -199,6 +210,10 @@ function setLanguage(lang) {
     document.getElementById('addTagText').textContent = t.addTag;
     document.getElementById('editTagsText').textContent = t.editTags;
     document.getElementById('editTagsBtn').title = t.editTags;
+    modalTitleTag.textContent = t.modalTitleTag;
+    tagNameInput.placeholder = t.placeholderTag;
+    document.getElementById('cancelTagBtn').textContent = t.cancel;
+    document.getElementById('confirmTagBtn').textContent = t.confirm;
     document.getElementById('modalTitle').textContent = t.modalTitle;
     document.getElementById('labelColor').textContent = t.labelColor;
     document.getElementById('labelTags').textContent = t.labelTags;
@@ -447,17 +462,15 @@ editTagsBtn.addEventListener('click', () => {
 });
 
 addTagBtn.addEventListener('click', () => {
-    const t = translations[currentLang];
-    const newTagScreen = prompt(t.newTagPrompt);
-    if (newTagScreen && newTagScreen.trim() !== '') {
-        const tag = newTagScreen.trim();
-        
+    tagNameInput.value = '';
+    tagSubmitCallback = (tag) => {
         if (!customTags.includes(tag)) {
             customTags.push(tag);
             localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
-            renderTags(); // Actualizar la lista inmediatamente
+            renderTags();
         }
-    }
+    };
+    tagDialog.showModal();
 });
 
 // --- MANEJO DEL DIALOG ---
@@ -512,6 +525,20 @@ hiddenColorPicker.addEventListener('input', (e) => {
 // Cerrar modal al pulsar cancelar
 cancelBtn.addEventListener('click', () => {
     counterDialog.close();
+});
+
+cancelTagBtn.addEventListener('click', () => {
+    tagDialog.close();
+});
+
+// Manejar el submit del formulario del tag dialog
+tagDialog.querySelector('form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const tag = tagNameInput.value.trim();
+    if (tag && tagSubmitCallback) {
+        tagSubmitCallback(tag);
+    }
+    tagDialog.close();
 });
 
 // Manejar el submit del formulario del dialog
@@ -827,9 +854,8 @@ function renderModalTags() {
     addPill.className = 'modal-tag-add';
     addPill.textContent = `+ ${t.addTag}`;
     addPill.onclick = () => {
-        const newTagName = prompt(t.newTagPrompt);
-        if (newTagName && newTagName.trim() !== '') {
-            const tag = newTagName.trim();
+        tagNameInput.value = '';
+        tagSubmitCallback = (tag) => {
             if (!customTags.includes(tag)) {
                 customTags.push(tag);
                 localStorage.setItem('my_custom_tags', JSON.stringify(customTags));
@@ -839,7 +865,8 @@ function renderModalTags() {
                 tempSelectedTags.push(tag);
             }
             renderModalTags();
-        }
+        };
+        tagDialog.showModal();
     };
     modalTagsList.appendChild(addPill);
 }
