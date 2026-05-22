@@ -119,14 +119,38 @@ let editingIndex = null; // Índice del contador que se está editando
 let tagSubmitCallback = null; // Callback para el diálogo de etiquetas
 let pressTimer;
 
-// Sonidos
-const tapSound = new Audio('tap.mp3');
+// --- GESTIÓN DE SONIDO (Web Audio API para baja latencia) ---
+let audioCtx;
+let soundBuffer;
+
+async function initAudio() {
+    try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const response = await fetch('tap.mp3');
+        const arrayBuffer = await response.arrayBuffer();
+        soundBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    } catch (e) {
+        console.error("Error al cargar el sonido:", e);
+    }
+}
+
+function playTapSound() {
+    if (!audioCtx || !soundBuffer) return;
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = soundBuffer;
+    source.connect(audioCtx.destination);
+    source.start(0);
+}
 
 // --- INICIALIZACIÓN ---
 
 function init() {
     setLanguage(currentLang);
     setupCountersDragAndDrop();
+    initAudio();
 }
 
 function handleCounterReorder() {
@@ -909,8 +933,7 @@ function addCounter() {
 
 // Función para actualizar el valor (+1 o -1)
 function updateValue(index, change) {
-    tapSound.currentTime = 0;
-    tapSound.play();
+    playTapSound();
     counters[index].value += change;
     saveToLocalStorage();
     renderCounters();
