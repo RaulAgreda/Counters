@@ -119,6 +119,9 @@ let editingIndex = null; // Índice del contador que se está editando
 let tagSubmitCallback = null; // Callback para el diálogo de etiquetas
 let pressTimer;
 
+// Sonidos
+const tapSound = new Audio('tap.mp3');
+
 // --- INICIALIZACIÓN ---
 
 function init() {
@@ -906,6 +909,8 @@ function addCounter() {
 
 // Función para actualizar el valor (+1 o -1)
 function updateValue(index, change) {
+    tapSound.currentTime = 0;
+    tapSound.play();
     counters[index].value += change;
     saveToLocalStorage();
     renderCounters();
