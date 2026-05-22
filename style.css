@@ -473,7 +473,35 @@ h1 {
     color: #aaa;
 }
 
-/* Botón Flotante (FAB) */
+/* Botones Flotantes */
+.mute-btn {
+    position: fixed;
+    bottom: 105px;
+    right: 37px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid #444;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.2s, background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.mute-btn:hover {
+    background-color: #444;
+    transform: scale(1.1);
+}
+
+.mute-btn span {
+    font-size: 24px;
+}
+
 .fab-btn {
     position: fixed;
     bottom: 30px;

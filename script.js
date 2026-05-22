@@ -28,7 +28,9 @@ const translations = {
         errorNameRequired: "Por favor, escribe un nombre para el contador.",
         editTags: "Editar etiquetas",
         deleteTagConfirm: "¿Borrar la etiqueta \"{name}\"? Esto no afectará a los contadores que ya la tengan.",
-        resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?"
+        resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?",
+        muteTitle: "Silenciar",
+        unmuteTitle: "Activar sonido"
     },
     en: {
         title: "My Counters",
@@ -58,7 +60,9 @@ const translations = {
         errorNameRequired: "Please enter a name for the counter.",
         editTags: "Edit tags",
         deleteTagConfirm: "Delete tag \"{name}\"? This won't affect counters already using it.",
-        resetSelectionConfirm: "Reset the {count} selected counters to 0?"
+        resetSelectionConfirm: "Reset the {count} selected counters to 0?",
+        muteTitle: "Mute",
+        unmuteTitle: "Unmute"
     }
 };
 
@@ -70,6 +74,8 @@ const modalTagsList = document.getElementById('modalTagsList');
 const addBtn = document.getElementById('addBtn');
 const countersContainer = document.getElementById('countersContainer');
 const fabAdd = document.getElementById('fabAdd');
+const muteBtn = document.getElementById('muteBtn');
+const muteIcon = document.getElementById('muteIcon');
 const counterDialog = document.getElementById('counterDialog');
 const cancelBtn = document.getElementById('cancelBtn');
 
@@ -122,6 +128,7 @@ let pressTimer;
 // --- GESTIÓN DE SONIDO (Web Audio API para baja latencia) ---
 let audioCtx;
 let soundBuffer;
+let isMuted = JSON.parse(localStorage.getItem('my_app_muted')) || false;
 
 async function initAudio() {
     try {
@@ -135,7 +142,7 @@ async function initAudio() {
 }
 
 function playTapSound() {
-    if (!audioCtx || !soundBuffer) return;
+    if (isMuted || !audioCtx || !soundBuffer) return;
     if (audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
@@ -145,12 +152,25 @@ function playTapSound() {
     source.start(0);
 }
 
+function toggleMute() {
+    isMuted = !isMuted;
+    localStorage.setItem('my_app_muted', JSON.stringify(isMuted));
+    updateMuteUI();
+}
+
+function updateMuteUI() {
+    const t = translations[currentLang];
+    muteIcon.textContent = isMuted ? 'volume_off' : 'volume_up';
+    muteBtn.title = isMuted ? t.unmuteTitle : t.muteTitle;
+}
+
 // --- INICIALIZACIÓN ---
 
 function init() {
     setLanguage(currentLang);
     setupCountersDragAndDrop();
     initAudio();
+    updateMuteUI();
 }
 
 function handleCounterReorder() {
@@ -252,6 +272,7 @@ function setLanguage(lang) {
     counterNameInput.placeholder = t.placeholderName;
     menuBtn.title = t.menuTitle;
     fabAdd.title = t.fabTitle;
+    updateMuteUI();
     document.getElementById('customColorBtn').title = t.customColor;
 
     // Si el currentTag es el especial "Todos/All", lo actualizamos
@@ -953,6 +974,8 @@ function deleteCounter(index) {
 
 // --- EVENTOS ---
 // addBtn.addEventListener('click', addCounter); // Ya lo manejamos con el submit del form
+
+muteBtn.addEventListener('click', toggleMute);
 
 // Permitir añadir también pulsando la tecla "Enter" en el input
 // (Esto se maneja automáticamente con el submit del form en el dialog)
