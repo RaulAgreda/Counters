@@ -171,6 +171,13 @@ function init() {
     setupCountersDragAndDrop();
     initAudio();
     updateMuteUI();
+    registerOfflineApp();
+}
+
+function registerOfflineApp() {
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+        navigator.serviceWorker.register('./sw.js').catch(error => console.warn('No se pudo activar el modo offline instalable:', error));
+    }
 }
 
 function handleCounterReorder() {
