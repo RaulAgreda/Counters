@@ -56,6 +56,15 @@
     <!-- Grid donde se pintarán los contadores -->
     <div class="counters-container" id="countersContainer"></div>
 
+    <footer id="selectionFooter" class="selection-footer hidden">
+        <button id="subtractSelectionBtn" class="selection-adjust-btn" type="button" title="Restar a seleccionados">−</button>
+        <label class="selection-amount-field" for="selectionAmount">
+            <span id="selectionAmountLabel">Cantidad</span>
+            <input id="selectionAmount" type="number" min="1" step="1" value="1" inputmode="numeric">
+        </label>
+        <button id="addSelectionBtn" class="selection-adjust-btn" type="button" title="Sumar a seleccionados">+</button>
+    </footer>
+
     <!-- Botones flotantes -->
     <button id="muteBtn" class="mute-btn" title="Silenciar">
         <span id="muteIcon" class="material-symbols-outlined">volume_up</span>

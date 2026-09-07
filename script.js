@@ -29,6 +29,9 @@ const translations = {
         editTags: "Editar etiquetas",
         deleteTagConfirm: "¿Borrar la etiqueta \"{name}\"? Esto no afectará a los contadores que ya la tengan.",
         resetSelectionConfirm: "¿Reiniciar a 0 los {count} contadores seleccionados?",
+        selectionAmount: "Cantidad",
+        subtractSelected: "Restar a seleccionados",
+        addSelected: "Sumar a seleccionados",
         muteTitle: "Silenciar",
         unmuteTitle: "Activar sonido"
     },
@@ -61,6 +64,9 @@ const translations = {
         editTags: "Edit tags",
         deleteTagConfirm: "Delete tag \"{name}\"? This won't affect counters already using it.",
         resetSelectionConfirm: "Reset the {count} selected counters to 0?",
+        selectionAmount: "Amount",
+        subtractSelected: "Subtract from selected",
+        addSelected: "Add to selected",
         muteTitle: "Mute",
         unmuteTitle: "Unmute"
     }
@@ -108,6 +114,11 @@ const cancelSelectionBtn = document.getElementById('cancelSelectionBtn');
 const editSelectionBtn = document.getElementById('editSelectionBtn');
 const resetSelectionBtn = document.getElementById('resetSelectionBtn');
 const deleteSelectionBtn = document.getElementById('deleteSelectionBtn');
+const selectionFooter = document.getElementById('selectionFooter');
+const selectionAmount = document.getElementById('selectionAmount');
+const selectionAmountLabel = document.getElementById('selectionAmountLabel');
+const subtractSelectionBtn = document.getElementById('subtractSelectionBtn');
+const addSelectionBtn = document.getElementById('addSelectionBtn');
 
 // Estado de la aplicación
 let counters = JSON.parse(localStorage.getItem('my_counters')) || [];
@@ -281,6 +292,11 @@ function setLanguage(lang) {
     fabAdd.title = t.fabTitle;
     updateMuteUI();
     document.getElementById('customColorBtn').title = t.customColor;
+    selectionAmountLabel.textContent = t.selectionAmount;
+    subtractSelectionBtn.title = t.subtractSelected;
+    subtractSelectionBtn.setAttribute('aria-label', t.subtractSelected);
+    addSelectionBtn.title = t.addSelected;
+    addSelectionBtn.setAttribute('aria-label', t.addSelected);
 
     // Si el currentTag es el especial "Todos/All", lo actualizamos
     if (currentTag === 'Todos' || currentTag === 'All') {
@@ -615,6 +631,8 @@ function updateSelectionUI() {
     
     mainHeader.classList.toggle('hidden', isSelecting);
     selectionHeader.classList.toggle('hidden', !isSelecting);
+    selectionFooter.classList.toggle('hidden', !isSelecting);
+    document.body.classList.toggle('selection-mode', isSelecting);
     
     selectionCount.textContent = selectedCountersIDs.length;
     
@@ -711,6 +729,8 @@ function updateCounter() {
 cancelSelectionBtn.addEventListener('click', clearSelection);
 deleteSelectionBtn.addEventListener('click', deleteSelectedCounters);
 resetSelectionBtn.addEventListener('click', resetSelectedCounters);
+subtractSelectionBtn.addEventListener('click', () => adjustSelectedCounters(-1));
+addSelectionBtn.addEventListener('click', () => adjustSelectedCounters(1));
 editSelectionBtn.addEventListener('click', openEditModal);
 
 // Función para guardar el estado actual en el localStorage
@@ -1064,6 +1084,24 @@ function setupContinuousControl(button, index, change, valueElement) {
     });
 }
 
+function adjustSelectedCounters(direction) {
+    const amount = Number(selectionAmount.value);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        selectionAmount.focus();
+        return;
+    }
+
+    counters.forEach(counter => {
+        if (selectedCountersIDs.includes(counter.id)) {
+            counter.value += direction * amount;
+        }
+    });
+
+    playTapSound();
+    saveToLocalStorage();
+    renderCounters();
+}
+
 // Función para actualizar el valor (+1 o -1)
 function updateValue(index, change, valueElement = null, withSound = true) {
     if (withSound) playTapSound();
@@ -1100,7 +1138,9 @@ muteBtn.addEventListener('click', toggleMute);
 // Inicialización de la aplicación
 // Deseleccionar al hacer click fuera de un contador
 document.addEventListener('mousedown', (e) => {
-    if (!e.target.closest('.counter-wrapper') && !e.target.closest('.selection-header')) {
+    if (!e.target.closest('.counter-wrapper') &&
+        !e.target.closest('.selection-header') &&
+        !e.target.closest('.selection-footer')) {
         clearSelection();
     }
 });
