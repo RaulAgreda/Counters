@@ -759,7 +759,15 @@ function renderCounters() {
         };
 
         const startPress = (e) => {
-            if (e.target.closest('.btn-control') || e.target.closest('.btn-delete')) return;
+            const eventPath = e.composedPath ? e.composedPath() : [e.target];
+            const comesFromControl = eventPath.some(element =>
+                element?.classList?.contains('btn-control') ||
+                element?.classList?.contains('btn-delete')
+            );
+            if (comesFromControl) {
+                clearTimeout(pressTimer);
+                return;
+            }
             pressTimer = setTimeout(() => {
                 if (selectedCountersIDs.length === 0) {
                     selectedCountersIDs.push(counter.id);
@@ -846,13 +854,13 @@ function renderCounters() {
         minusBtn.className = 'btn-control btn-minus';
         minusBtn.textContent = '-';
         minusBtn.style.backgroundColor = counter.color;
-        minusBtn.onclick = () => updateValue(originalIndex, -1);
+        setupContinuousControl(minusBtn, originalIndex, -1, value);
 
         const plusBtn = document.createElement('button');
         plusBtn.className = 'btn-control btn-plus';
         plusBtn.textContent = '+';
         plusBtn.style.backgroundColor = counter.color;
-        plusBtn.onclick = () => updateValue(originalIndex, 1);
+        setupContinuousControl(plusBtn, originalIndex, 1, value);
 
         // Ensamblamos la tarjeta
         controls.appendChild(minusBtn);
@@ -959,12 +967,114 @@ function addCounter() {
     renderCounters();
 }
 
+// Configura una pulsación normal o continua con dos velocidades.
+function setupContinuousControl(button, index, change, valueElement) {
+    const INITIAL_DELAY = 450;
+    const SLOW_INTERVAL = 300;
+    const FAST_INTERVAL = 90;
+    const FAST_AFTER = 2000;
+
+    let repeatTimer = null;
+    let pressStartedAt = 0;
+    let isPressed = false;
+
+    button.draggable = false;
+
+    const disableParentDrag = () => {
+        clearTimeout(pressTimer);
+        const wrapper = button.closest('.counter-wrapper');
+        if (!wrapper) return;
+        wrapper.draggable = false;
+        wrapper.classList.remove('dragging');
+    };
+
+    // Bloquea los gestos nativos táctiles para que la pulsación larga no
+    // seleccione contenido ni active el arrastre de la tarjeta contenedora.
+    const blockNativeTouch = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        disableParentDrag();
+    };
+
+    button.addEventListener('touchstart', blockNativeTouch, { passive: false });
+    button.addEventListener('touchmove', blockNativeTouch, { passive: false });
+    button.addEventListener('touchend', (event) => event.stopPropagation());
+    button.addEventListener('touchcancel', (event) => event.stopPropagation());
+
+    const repeat = () => {
+        if (!isPressed) return;
+
+        updateValue(index, change, valueElement, false);
+        const elapsed = performance.now() - pressStartedAt;
+        const accelerationProgress = Math.min(
+            Math.max((elapsed - INITIAL_DELAY) / (FAST_AFTER - INITIAL_DELAY), 0),
+            1
+        );
+        const nextInterval = SLOW_INTERVAL +
+            (FAST_INTERVAL - SLOW_INTERVAL) * accelerationProgress;
+        repeatTimer = setTimeout(repeat, nextInterval);
+    };
+
+    const stop = (event) => {
+        if (event) event.stopPropagation();
+        isPressed = false;
+        clearTimeout(repeatTimer);
+        repeatTimer = null;
+        button.classList.remove('is-pressed');
+    };
+
+    button.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0 || isPressed) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        disableParentDrag();
+        isPressed = true;
+        pressStartedAt = performance.now();
+        button.classList.add('is-pressed');
+        button.setPointerCapture?.(event.pointerId);
+
+        updateValue(index, change, valueElement);
+        repeatTimer = setTimeout(repeat, INITIAL_DELAY);
+    });
+
+    button.addEventListener('pointerup', stop);
+    button.addEventListener('pointercancel', stop);
+    button.addEventListener('lostpointercapture', stop);
+    button.addEventListener('pointermove', (event) => {
+        if (!isPressed) return;
+        event.preventDefault();
+        event.stopPropagation();
+        disableParentDrag();
+    });
+
+    // Chrome/Edge también generan eventos de ratón compatibles después de
+    // los eventos de puntero. Se detienen para que no lleguen al wrapper.
+    button.addEventListener('mousedown', blockNativeTouch);
+    button.addEventListener('mouseup', (event) => event.stopPropagation());
+    button.addEventListener('selectstart', blockNativeTouch);
+    button.addEventListener('contextmenu', blockNativeTouch);
+    button.addEventListener('dragstart', blockNativeTouch);
+
+    // Conserva el uso por teclado y evita sumar otra vez tras pointerup.
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.detail === 0) updateValue(index, change, valueElement);
+    });
+}
+
 // Función para actualizar el valor (+1 o -1)
-function updateValue(index, change) {
-    playTapSound();
+function updateValue(index, change, valueElement = null, withSound = true) {
+    if (withSound) playTapSound();
     counters[index].value += change;
     saveToLocalStorage();
-    renderCounters();
+
+    if (valueElement?.isConnected) {
+        valueElement.textContent = counters[index].value;
+    } else {
+        renderCounters();
+    }
 }
 
 // Función para eliminar un contador

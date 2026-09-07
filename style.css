@@ -761,6 +761,9 @@ input[type="color"]::-webkit-color-swatch {
     display: flex;
     gap: 1px;
     width: 100%;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .btn-control {
@@ -771,10 +774,26 @@ input[type="color"]::-webkit-color-swatch {
     font-weight: bold;
     cursor: pointer; /* Color del texto siempre blanco para contraste */
     transition: opacity 0.2s;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.btn-control * {
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .btn-control:hover {
     opacity: 0.9;
+}
+
+.btn-control.is-pressed {
+    opacity: 0.75;
 }
 
 .btn-delete {
@@ -791,4 +810,12 @@ input[type="color"]::-webkit-color-swatch {
 
 .btn-delete:hover {
     color: #c0392b;
+}
+
+/* Evita el zoom por doble toque en iOS sobre controles interactivos. */
+button,
+[role="button"] {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
 }
